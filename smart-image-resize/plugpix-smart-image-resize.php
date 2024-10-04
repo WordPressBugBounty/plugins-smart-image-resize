@@ -19,7 +19,7 @@
  * Text Domain: wp-smart-image-resize
  * Domain Path: /languages
  * WC requires at least: 3.0.0
- * WC tested up to: 9.2
+ * WC tested up to: 9.3
  */
 
 
