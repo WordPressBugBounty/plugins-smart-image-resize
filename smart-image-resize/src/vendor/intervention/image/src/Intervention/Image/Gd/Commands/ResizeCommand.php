@@ -43,8 +43,8 @@ class ResizeCommand extends AbstractCommand
      */
     protected function modify($image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h)
     {
-        // create new image
-        $modified = imagecreatetruecolor($dst_w, $dst_h);
+        // create new image - explicitly convert dimensions to integers
+        $modified = imagecreatetruecolor((int) round($dst_w), (int) round($dst_h));
 
         // get current image
         $resource = $image->getCore();
@@ -66,14 +66,14 @@ class ResizeCommand extends AbstractCommand
         $result = imagecopyresampled(
             $modified,
             $resource,
-            $dst_x,
-            $dst_y,
-            $src_x,
-            $src_y,
-            $dst_w,
-            $dst_h,
-            $src_w,
-            $src_h
+            (int) round($dst_x),
+            (int) round($dst_y),
+            (int) round($src_x),
+            (int) round($src_y),
+            (int) round($dst_w),
+            (int) round($dst_h),
+            (int) round($src_w),
+            (int) round($src_h)
         );
 
         // set new content as recource

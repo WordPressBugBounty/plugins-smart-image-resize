@@ -25,8 +25,10 @@ class Filter_Subscriber
     public function subscribe()
     {
         add_filter( 'wp_update_attachment_metadata', function($meta, $id){
-            update_post_meta($id, '_old_image_meta', wp_get_attachment_metadata($id, true));
+            $old_metadata = get_post_meta($id, '_wp_attachment_metadata', true);
+            update_post_meta($id, '_old_image_meta', $old_metadata);
             return $meta;
+            
         },10,2);
 
         if (! wp_sir_get_settings()['enable']) {

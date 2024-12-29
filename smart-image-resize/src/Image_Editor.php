@@ -50,6 +50,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
             // A low priority < 10 to let plugins optimize thumbnails.
             add_filter('wp_generate_attachment_metadata', [$this, 'processImage'],9, 2);
 
+            add_filter('wp_update_attachment_metadata', [$this, 'recheck_subsizes'], 10, 2);
             // Force 1:1 size for single product thumbnail.
             // @see  force_square_woocommerce_single()
             add_filter('woocommerce_get_image_size_single', [$this, 'forceSquareWooCommerceSingle']);
@@ -59,6 +60,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
             add_filter('woocommerce_gallery_image_size', [$this, 'forceWooCommerceSingle'], PHP_INT_MAX);
 
         }
+
+       
 
         /**
          * Determine whether the given size is selected.
@@ -120,6 +123,26 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
             return $size;
         }
 
+        function recheck_subsizes($metadata, $image_id) {
+            $stored_meta = wp_get_attachment_metadata($image_id);
+
+            // Check if the full size image has been edited
+            if (isset($metadata['file']) && isset($stored_meta['file'])) {
+                $new_basename = wp_basename($metadata['file']);
+                $old_basename = wp_basename($stored_meta['file']);
+                
+                // Check if basenames are different and new file ends with -e followed by 13 digits
+                if (($new_basename !== $old_basename && preg_match('/-e\d{13}\.[^.]+$/', $new_basename)) || preg_match('/-e\d{13}\.[^.]+$/', $old_basename)) {
+                    $new_metadata = $this->processImage($metadata, $image_id);
+                    if(is_array($new_metadata) && !empty($new_metadata)) {
+                        return $new_metadata;
+                    }
+                }
+            }
+
+            return $metadata;
+        }
+
         /**
          * Proceed image editing and thumbnails generation.
          *
@@ -164,6 +187,13 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
 
                 // Let's try to load the given image to memory,
                 $image = $imageManager->make($imageMeta->getOriginalFullPath());
+
+                // Correct image orientation according to Exif data
+                try {
+                    $image->orientate();
+                } catch (\Exception $e) {
+                    // Do nothing.
+                }
 
                 @set_time_limit(0);
 
@@ -243,7 +273,6 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 
                 Quota::consume($imageId);
                 
-
                 return $new_meta;
             } catch (Invalid_Image_Meta_Exception $e) {
                 return $metadata;

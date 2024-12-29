@@ -86,18 +86,18 @@ final class Quota
 
     public static function show_quota_status()
     {
+        ob_start();
         ?>
       <div class="wpsirQuotaStatus">
-
-        <span><?php echo self::get_consumed() ?> image(s) of <?php echo self::get_initial_credits() ?> processed <span class="wp-sir-help-tip" title='To see processed images, apply the filter "Smart Resize: Processed" in your media library.'></span>
- ( <a target="_blank" href="https://sirplugin.com/#pro">Upgrade to PRO</a> for unlimited images ).</span>
-        <span class="wpsirQuotaStatusProgressBar <?php echo self::is_exceeding_soon() ? 'isExceeding' : '' ?>
+      <span class="wpsirQuotaStatusProgressBar <?php echo self::is_exceeding_soon() ? 'isExceeding' : '' ?>
         
         <?php echo self::isExceeded() ? 'isExceeded' : '' ?>
         "><span style="width: <?php echo self::get_consumed() ?>px"></span></span>
-        
+        <span><?php echo self::get_consumed() ?> <?php echo self::get_consumed() == 1 ? 'image' : 'images' ?> of <?php echo self::get_initial_credits() ?> processed <span class="wp-sir-help-tip" title='To see processed images, apply the filter "Smart Resize: Processed" in your media library.'></span>
+<a target="_blank" href="https://sirplugin.com/#pro">Upgrade to PRO for unlimited images</a>.</span>
+       
       </div>
-
       <?php
+      return ob_get_clean();
     }
 }

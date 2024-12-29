@@ -23,14 +23,23 @@ class Thumbnail_Filter implements FilterInterface {
         $this->size_data           = $size_data;
         $this->size_name           = $size_name;
 
+        // Check if upscaling is disabled in settings
+        $settings = wp_sir_get_settings();
+        $disable_upscale = !empty($settings['disable_upscale']);
+
         /**
          * Filter whether to upscale small original images.
          * 
          * @param bool   $allow_upscale
          * @param string $size_name 
-         * @param array   $size_data Array of {width, height}
+         * @param array  $size_data Array of {width, height}
          */
-        $this->allow_upscale = (bool)apply_filters('wp_sir_maybe_upscale', true, $this->size_name, $this->size_data);
+        $this->allow_upscale = (bool)apply_filters(
+            'wp_sir_maybe_upscale', 
+            !$disable_upscale, 
+            $this->size_name, 
+            $this->size_data
+        );
     }
 
 
@@ -42,6 +51,13 @@ class Thumbnail_Filter implements FilterInterface {
         try {
             if (!($image->getCore() instanceof \Imagick)) {
                 throw new \Exception('Not an Imagick image');
+            }
+
+            // @experimental This filter is subject to potential removal in future versions. Exercise caution when using.
+            $resized_image = apply_filters('wp_sir_pre_resize_image__experimental', null, $image->getCore(), $this->size_data);
+            if ($resized_image instanceof \Imagick) {
+                $image->setCore($resized_image);
+                return $image;
             }
 
             // Get thumbnail position setting.
@@ -77,7 +93,12 @@ class Thumbnail_Filter implements FilterInterface {
             list($x, $y) = position_to_coords($position, $this->size_data, $image_size);
 
             // Resize canvas and place the image within the give position.
-            $image->getCore()->extentImage($this->size_data['width'], $this->size_data['height'], $x, $y);
+            $image->getCore()->extentImage(
+                (int)$this->size_data['width'],
+                (int)$this->size_data['height'],
+                (int)$x,
+                (int)$y
+            );
 
             // This is needed to use a custom background color.
             $image->getCore()->mergeImageLayers(\Imagick::LAYERMETHOD_FLATTEN);
@@ -93,11 +114,19 @@ class Thumbnail_Filter implements FilterInterface {
         && wp_sir_get_settings()['crop_mode'] === 'fill'){
             
             /** @var $constraint Constraint */
-             return $image->fit($this->size_data['width'], $this->size_data['height'], function ($constraint) {
+            $image->fit($this->size_data['width'], $this->size_data['height'], function ($constraint) {
                 if (!$this->allow_upscale) {
                     $constraint->upsize();
                 }
             });
+
+            // Add whitespace if upscaling is not allowed
+            if($this->allow_upscale){
+                return $image;
+            }else{
+                return $image->filter(new Recanvas_Filter($this->size_data));
+            }
+
         }
             
         try {
@@ -106,6 +135,8 @@ class Thumbnail_Filter implements FilterInterface {
         }
 
         // GD or Imagick failed.
+
+        
         $image->resize($this->size_data['width'], $this->size_data['height'], function ($constraint) {
 
             /** @var $constraint Constraint */

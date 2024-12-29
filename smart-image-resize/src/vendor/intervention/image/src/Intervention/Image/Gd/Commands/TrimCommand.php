@@ -37,6 +37,9 @@ class TrimCommand extends ResizeCommand
             $away[$key] = strtolower($value);
         }
 
+        if ($base === null) {
+            $base = 'top-left'; // Default value when $base is null
+        }
         // define base color position
         switch (strtolower($base)) {
             case 'transparent':

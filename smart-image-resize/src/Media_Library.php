@@ -35,7 +35,7 @@ class Media_Library
       return $query;
     }
 
-    $post_query = filter_input(INPUT_POST, 'query', FILTER_SANITIZE_STRING, FILTER_REQUIRE_ARRAY);
+    $post_query = filter_input(INPUT_POST, 'query', FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_REQUIRE_ARRAY);
 
     if (!isset($post_query['_filter'])) {
       return $query;
@@ -106,7 +106,7 @@ class Media_Library
       return;
     }
 
-    $selected_filter = filter_input(INPUT_GET, 'wp_sir_filter', FILTER_SANITIZE_STRING);
+    $selected_filter = sanitize_text_field(filter_input(INPUT_GET, 'wp_sir_filter'));
 
 ?>
 

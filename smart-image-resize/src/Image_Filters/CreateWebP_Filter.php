@@ -50,6 +50,13 @@ class CreateWebP_Filter implements FilterInterface {
                 $fallbackmanager = new Image_Manager($fallbackdriver);
                 $fallbackimage =  $fallbackmanager->make($image->basePath());
 
+                // Correct image orientation according to Exif data
+                try {
+                    $fallbackimage->orientate();
+                } catch (\Exception $e) {
+                    // Do nothing.
+                }
+
                 if ($this->size === 'full' && is_object($this->metaobject)) {
                     if (is_imagick_image($fallbackimage->getCore())) {
                         $fallbackimage = $fallbackimage->filter(new Trim_Filter($this->metaobject));

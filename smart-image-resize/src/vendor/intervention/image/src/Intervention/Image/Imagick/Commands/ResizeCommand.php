@@ -21,8 +21,11 @@ class ResizeCommand extends AbstractCommand
         // resize box
         $resized = $image->getSize()->resize($width, $height, $constraints);
 
-        // modify image
-        $image->getCore()->scaleImage($resized->getWidth(), $resized->getHeight());
+        // modify image - explicitly convert float dimensions to integers
+        $image->getCore()->scaleImage(
+            (int) round($resized->getWidth()),
+            (int) round($resized->getHeight())
+        );
 
         return true;
     }

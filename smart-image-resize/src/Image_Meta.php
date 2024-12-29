@@ -53,13 +53,13 @@ class Image_Meta
             '_trimmed_width'  => '',
             '_trimmed_height' => '',
             '_mime-type'      => '',
-            'sizes'           => []
+            'sizes'           => [],
         ];
 
         $this->data = wp_parse_args( $data, $defaults );
 
         $this->data[ 'sizes' ][ 'full' ] = [
-            'file'      => basename( $this->data[ 'file' ] ),
+            'file'      => wp_basename( $this->data[ 'file' ] ),
             'width'     => $this->data[ 'width' ],
             'height'    => $this->data[ 'height' ],
             'mime-type' => $this->data[ '_mime-type' ],
@@ -150,21 +150,30 @@ class Image_Meta
      */
     public function getOriginalFullPath( $extension = false )
     {
-        $uploadsDir = wp_get_upload_dir()[ 'basedir' ];
+     
+        $file = get_attached_file( $this->id );
 
-        if ( ! $extension ) {
-            $path = path_join( $uploadsDir, $this->data[ 'file' ] );
-            if ( is_readable( $path ) ) {
-                return $path;
+        $basename = wp_basename( $file );
+
+        // Check for edited version first
+        if ( preg_match( '/-e[0-9]{13}\./', $basename ) ) {
+            // This is an edited version, use it
+        } elseif ( function_exists( 'wp_get_original_image_path' ) ) {
+            // Try to get the original file
+            $original_file = wp_get_original_image_path( $this->id );
+            if ( $original_file && file_exists( $original_file ) ) {
+                $file = $original_file;
             }
-
-            return get_attached_file( $this->id );
         }
-
-        return path_join( $uploadsDir,
-            trailingslashit( $this->getRelativeDirectory() ) . File::mb_pathinfo( $this->data[ 'file' ],
-                PATHINFO_FILENAME ) . '.' . $extension );
-
+        
+        // Change extension if provided
+        if ( $extension ) {
+            $info = File::mb_pathinfo( $file );
+            $file = $info['dirname'] . '/' . $info['filename'] . '.' . $extension;
+        }
+        
+        // If neither edited nor original file found, we'll use the attached file
+        return $file;
     }
 
     /**

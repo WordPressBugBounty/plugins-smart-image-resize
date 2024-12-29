@@ -106,18 +106,6 @@ var WP_SIR_UTIL = {
   }
 
 
-  // Toggle the Trim option settings.
-  $('#wp-sir-enable-trim').on('change', function () {
-    if ($(this).is(':checked')) {
-      $('#wp-sir-trim-feather-wrap').removeClass('hidden');
-      $('#wp-sir-trim-tolerance-wrap').removeClass('hidden');
-    } else {
-      $('#wp-sir-trim-feather-wrap').addClass('hidden');
-      $('#wp-sir-trim-tolerance-wrap').addClass('hidden');
-    }
-
-  }).change();
-
 
   // Reset "Image sizes" to default ones.
   $(document).on('click', '#wpsirResetDefaultSizes', function () {
@@ -215,6 +203,19 @@ var WP_SIR_UTIL = {
     }
     var isAllSizesSelected = $('.wpSirSelectSize:checked').length === $('.wpSirSelectSize').length;
     $('#wp-sir-toggle-all-sizes').prop('checked', isAllSizesSelected);
+
+    // Check if current selection matches defaults
+    const defaultSizes = $('#wp-sir-sizes-selector').data('defaults').split(',');
+    const currentSizes = $('.wpSirSelectSize:checked').map(function() {
+        return $(this).val();
+    }).get();
+    
+    const hasChanges = defaultSizes.length !== currentSizes.length || 
+        defaultSizes.some(size => !currentSizes.includes(size)) ||
+        currentSizes.some(size => !defaultSizes.includes(size));
+    
+    // Show/hide reset button based on changes
+    $('#wpsirResetDefaultSizes').toggle(hasChanges);
   });
 
   $('.wpSirSelectSize').each(function () {
@@ -319,111 +320,58 @@ var WP_SIR_UTIL = {
 
 
   // Handle watermark slider change.
-  $('.wp-sir-watermark-size-slider').each(function () {
+  $('.wp-sir-watermark-size').on('input', function() {
     var $slider = $(this);
-    var $handle, // The slider handle
-      watermarkSize,
-      $watermarkSizeInput,// The watermark size
-      $previewImageContainer, // The Preview image container
-      previewSize, // The preview image size
-      $watermark, // The watermark image
-      $watermarkImageInput, // The watermark image ID
-      watermarkNewHeight,
-      watermarkNewWidth;
+    var $previewImageContainer = $('.wp-sir-watermark-preview-container');
+    var $watermark = $previewImageContainer.find('img');
+    var value = $slider.val();
+    
+    // Update the size input value
+    
+    if (!$watermark.length) {
+      return;
+    }
 
-    $slider.slider({
-      min: 1,
-      create: function (event, ui) {
-        $handle = $slider.find('.wp-sir-watermark-size-slider-handler');
-        $watermarkImageInput = $('input[name="wp_sir_settings[watermark_image]"]');
-        $watermarkSizeInput = $('input[name="wp_sir_settings[watermark_size]"]');
+    var previewSize = { 
+      w: $previewImageContainer.width(), 
+      h: $previewImageContainer.height() 
+    };
+    var watermarkSize = {
+      w: $watermark.width(), 
+      h: $watermark.height()
+    };
 
-        $previewImageContainer = $('.wp-sir-watermark-preview-container');
-        previewSize = { w: $previewImageContainer.width(), h: $previewImageContainer.height() };
+    var watermarkNewWidth, watermarkNewHeight;
 
-        $watermarkSizeInput = $('.' + $slider.data('input'));
-        var initValue = $watermarkSizeInput.val();
-        
-        $(this).slider('value', initValue);
-        $handle.text($(this).slider('value') + '%');
-        $watermark = $previewImageContainer.find('img');
+    if (watermarkSize.w >= watermarkSize.h) {
+      watermarkNewWidth = previewSize.w * value / 100;
+      if (watermarkNewWidth >= previewSize.w) {
+        watermarkNewWidth = previewSize.w;
+      }
+      watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
+    } else {
+      watermarkNewHeight = previewSize.h * value / 100;
+      if (watermarkNewHeight >= previewSize.h) {
+        watermarkNewHeight = previewSize.h;
+      }
+      watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
+    }
 
-        if (!$watermark.length) {
-          return;
-        }
-        watermarkSize = {w: $watermark.width(), h: $watermark.height()};
+    if (watermarkNewWidth >= previewSize.w) {
+      watermarkNewWidth = previewSize.w;
+      watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
+    }
 
-        if (watermarkSize.w >= watermarkSize.h) {
-          watermarkNewWidth = previewSize.w * $(this).slider('value') / 100;
-          if (watermarkNewWidth >= previewSize.w) {
-            watermarkNewWidth = previewSize.w;
-          }
-          watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
-        } else {
-          watermarkNewHeight = previewSize.h * $(this).slider('value') / 100;
-          if (watermarkNewHeight >= previewSize.h) {
-            watermarkNewHeight = previewSize.h
-          }
-          watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
-        }
+    if (watermarkNewHeight >= previewSize.h) {
+      watermarkNewHeight = previewSize.h;
+      watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
+    }
 
-
-        if(watermarkNewWidth >= previewSize.w) {
-          watermarkNewWidth = previewSize.w;
-          watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
-        }
-
-        if(watermarkNewHeight >= previewSize.h) {
-          watermarkNewHeight = previewSize.h;
-          watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
-        }
-
-
-        $watermark.css({ width: watermarkNewWidth + 'px', height: watermarkNewHeight + 'px' });
-      },
-      slide: function (event, ui) {
-        $(this).slider('value', ui.value);
-        $handle.text(ui.value + '%');
-        $watermarkSizeInput.val(ui.value);
-
-        $watermark = $previewImageContainer.find('img');
-
-        if (!$watermark.length) {
-          return;
-        }
-        watermarkSize = {w: $watermark.width(), h: $watermark.height()};
-        console.log(watermarkSize);
-        previewSize = { w: $previewImageContainer.width(), h: $previewImageContainer.height() };
-
-        if (watermarkSize.w >= watermarkSize.h) {
-          watermarkNewWidth = previewSize.w * ui.value / 100;
-          if (watermarkNewWidth >= previewSize.w) {
-            watermarkNewWidth = previewSize.w;
-          }
-          watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
-        } else {
-          watermarkNewHeight = watermarkSize.h * ui.value / 100;
-          if (watermarkNewHeight >= previewSize.h) {
-            watermarkNewHeight = previewSize.h
-          }
-          watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
-        }
-
-        if(watermarkNewWidth >= previewSize.w) {
-          watermarkNewWidth = previewSize.w;
-          watermarkNewHeight = watermarkSize.h * watermarkNewWidth / watermarkSize.w;
-        }
-
-        if(watermarkNewHeight >= previewSize.h) {
-          watermarkNewHeight = previewSize.h;
-          watermarkNewWidth = watermarkSize.w * watermarkNewHeight / watermarkSize.h;
-        }
-        $watermark.css({ width: watermarkNewWidth + 'px', height: watermarkNewHeight + 'px' });
-      },
-      change: function (event, ui) {
-        $handle.text(ui.value + '%');
-      },
+    $watermark.css({ 
+      width: watermarkNewWidth + 'px', 
+      height: watermarkNewHeight + 'px' 
     });
+
   });
 
   $(document).on('change', '#wp-sir-watermark-position', function () {
@@ -431,42 +379,26 @@ var WP_SIR_UTIL = {
   });
 
 
-  $('.wp-sir-watermark-opacity-slider').each(function () {
-    var $this = $(this);
-    var $handle,
-      $previewImageContainer,
-      $watermark,
-      $opacityInput;
+  $('.wp-sir-watermark-opacity').on('input', function() {
+    var $slider = $(this);
+    var $opacityInput = $('.' + $slider.data('input'));
+    var value = $slider.val();
+    var $watermark = $('.wp-sir-watermark-preview-container').find('img');
 
-    $(this).slider({
-      min: 1,
-      create: function () {
-        $handle = $this.find('.wp-sir-watermark-opacity-slider-handler');
-        $opacityInput = $('.' + $this.data('input'));
-        $(this).slider('value', $opacityInput.val());
-        $handle.text($(this).slider('value') + '%');
-        $previewImageContainer = $('.wp-sir-watermark-preview-container');
-        $watermark = $previewImageContainer.find('img');
+    // Update the opacity input value and display
+    $opacityInput.val(value);
+    $('.wp-sir-watermark-opacity-slider-handler').text(value + '%');
 
-        if ($watermark.length) {
-          $watermark.css({ opacity: $opacityInput.val() / 100 });
-        }
+    // Update watermark opacity if it exists
+    if ($watermark.length) {
+      $watermark.css({ opacity: value / 100 });
+    }
+  });
 
-      },
-      slide: function (event, ui) {
-
-        $handle.text(ui.value + '%');
-        $opacityInput.val(ui.value);
-
-        $watermark = $previewImageContainer.find('img');
-        if ($watermark.length) {
-          $watermark.css({ opacity: ui.value / 100 });
-        }
-
-      },
-      change: function (event, ui) {
-        $handle.text(ui.value + '%');
-      },
+  // Initialize opacity on page load
+  $(document).ready(function() {
+    $('.wp-sir-watermark-opacity').each(function() {
+      $(this).trigger('input');
     });
   });
 
@@ -474,105 +406,107 @@ var WP_SIR_UTIL = {
     var $img = $('.wp-sir-watermark-preview-container').find('img');
     var $offset_y = $('#wp-sir-watermark-offset-y');
     var $offset_x = $('#wp-sir-watermark-offset-x');
-    var offset_x = $offset_x.val();
-    var offset_y = $offset_y.val();
+    var offset_x = parseInt($offset_x.val()) || 0;
+    var offset_y = parseInt($offset_y.val()) || 0;
+    
+    // Reset any previous positioning
+    $img.css({
+      'top': '',
+      'left': '',
+      'right': '',
+      'bottom': '',
+      'transform': ''
+    });
+
+    // Enable both inputs by default
+    $offset_x.prop('disabled', false);
+    $offset_y.prop('disabled', false);
+
     switch ($element.val()) {
       case 'top-left':
         $img.css({
-          'top': '0px',
-          'left': '0px',
-          'right': 'auto',
-          'bottom': 'auto',
-          'transform': 'translate(' + offset_x + 'px, ' + offset_y + 'px)'
+          'top': offset_y + 'px',
+          'left': offset_x + 'px'
         });
-        $offset_x.removeAttr('disabled');
-        $offset_y.removeAttr('disabled');
         break;
       case 'top-right':
         $img.css({
-          'top': '0px',
-          'left': 'auto',
-          'right': '0px',
-          'bottom': 'auto',
-          'transform': 'translate(-' + offset_x + 'px, ' + offset_y + 'px)'
+          'top': offset_y + 'px',
+          'right': offset_x + 'px'
         });
-        $offset_x.removeAttr('disabled');
-        $offset_y.removeAttr('disabled');
         break;
       case 'bottom-left':
         $img.css({
-          'top': 'auto',
-          'left': '0px',
-          'right': 'auto',
-          'bottom': '0px',
-          'transform': 'translate(' + offset_x + 'px, -' + offset_y + 'px)'
+          'bottom': offset_y + 'px',
+          'left': offset_x + 'px'
         });
-        $offset_x.removeAttr('disabled');
-        $offset_y.removeAttr('disabled');
         break;
       case 'bottom-right':
         $img.css({
-          'top': 'auto',
-          'left': 'auto',
-          'right': '0px',
-          'bottom': '0px',
-          'transform': 'translate(-' + offset_x + 'px, -' + offset_y + 'px)'
+          'bottom': offset_y + 'px',
+          'right': offset_x + 'px'
         });
-        $offset_x.removeAttr('disabled');
-        $offset_y.removeAttr('disabled');
         break;
       case 'center':
         $img.css({
           'top': '50%',
           'left': '50%',
-          'right': 'auto',
-          'bottom': 'auto',
           'transform': 'translate(-50%, -50%)'
         });
+        // Disable both offsets for center position
         $offset_x.prop('disabled', true);
         $offset_y.prop('disabled', true);
         break;
+      case 'left':
+        $img.css({
+          'top': '50%',
+          'left': offset_x + 'px',
+          'transform': 'translateY(-50%)'
+        });
+        // Disable Y offset for left position
+        $offset_y.prop('disabled', true);
+        break;
+      case 'right':
+        $img.css({
+          'top': '50%',
+          'right': offset_x + 'px',
+          'transform': 'translateY(-50%)'
+        });
+        // Disable Y offset for right position
+        $offset_y.prop('disabled', true);
+        break;
+      case 'top':
+        $img.css({
+          'top': offset_y + 'px',
+          'left': '50%',
+          'transform': 'translateX(-50%)'
+        });
+        // Disable X offset for top position
+        $offset_x.prop('disabled', true);
+        break;
+      case 'bottom':
+        $img.css({
+          'bottom': offset_y + 'px',
+          'left': '50%',
+          'transform': 'translateX(-50%)'
+        });
+        // Disable X offset for bottom position
+        $offset_x.prop('disabled', true);
+        break;
     }
+
+    // Add visual feedback for disabled inputs
+    $('.wp-sir-offset-input').each(function() {
+      $(this).closest('.wp-sir-offset-field').toggleClass('disabled', $(this).prop('disabled'));
+    });
   }
 
   setWatermarkPosition($('#wp-sir-watermark-position'));
 
-  $(document).on('change keyup paste', '#wp-sir-watermark-offset-x', function () {
-
-    if ($('#wp-sir-watermark-position').val() == 'center') {
-      return;
-    }
-    var offset_x = $(this).val();
-    var offset_y = +$('#wp-sir-watermark-offset-y').val();
-
-
-    if ($('#wp-sir-watermark-position').val() == 'bottom-right' || $('#wp-sir-watermark-position').val() == 'top-right') {
-      offset_x = -offset_x;
-    }
-
-    if ($('#wp-sir-watermark-position').val() == 'bottom-left' || $('#wp-sir-watermark-position').val() == 'bottom-right') {
-      offset_y = -offset_y;
-    }
-
-    $('.wp-sir-watermark-preview-container')
-      .find('img')
-      .css('transform', 'translate(' + offset_x + 'px, ' + offset_y + 'px)');
-  }).change();
-
-  $(document).on('change keyup paste', '#wp-sir-watermark-offset-y', function () {
-    var offset_y = $(this).val();
-    var offset_x = +$('#wp-sir-watermark-offset-x').val();
-
-    if ($('#wp-sir-watermark-position').val() == 'bottom-right' || $('#wp-sir-watermark-position').val() == 'top-right') {
-      offset_x = -offset_x;
-    }
-    if ($('#wp-sir-watermark-position').val() == 'bottom-left' || $('#wp-sir-watermark-position').val() == 'bottom-right') {
-      offset_y = -offset_y;
-    }
-    $('.wp-sir-watermark-preview-container')
-      .find('img')
-      .css('transform', 'translate(' + offset_x + 'px, ' + offset_y + 'px)');
-  }).change();
+  // Update offset handlers
+  $(document).on('change keyup paste', '#wp-sir-watermark-offset-x, #wp-sir-watermark-offset-y', function() {
+    setWatermarkPosition($('#wp-sir-watermark-position'));
+  });
 
   $(document).on('change', '#wp-sir-enable-watermark', function () {
     if ($(this).is(':checked')) {
@@ -582,6 +516,186 @@ var WP_SIR_UTIL = {
 
     }
   }).change();
+
+
+  jQuery(document).ready(function($) {
+   
+
+    // Update tolerance value display
+    $('.wp-sir-range-input').on('input', function() {
+        $('#' + $(this).data('value-display')).text($(this).val() + '%');
+    });
+
+    $('#wp-sir-enable-trim').on('change', function() {
+      $('.wp-sir-trim-advanced-settings').toggle($(this).prop('checked'));
+  });
+    
+    
+    $('.wp-sir-watermark-size').trigger('input');
+    
+    // Initialize tooltips
+    $('.wp-sir-help-tip').tipTip({
+        'attribute': 'title',
+        'fadeIn': 50,
+        'fadeOut': 50,
+        'delay': 200
+    });
+
+    // Handle sizes section toggle
+    $('.wp-sir-toggle-sizes').on('click', function() {
+        const $button = $(this);
+        const $wrapper = $('#wp-sir-sizes-options');
+        const isExpanded = $button.attr('aria-expanded') === 'true';
+        
+        $wrapper.slideToggle(200);
+        $button.attr('aria-expanded', !isExpanded);
+        
+        // Update button text
+        const $text = $button.find('.wp-sir-toggle-text');
+        $text.text(isExpanded ? 'Customize image sizes' : 'Hide image sizes');
+    });
+
+    // Update sizes summary when selections change
+    $('#wp-sir-sizes-selector input[type="checkbox"]').on('change', function() {
+        const totalSizes = $('#wp-sir-sizes-selector .wpSirSelectSize').length;
+        const selectedSizes = $('#wp-sir-sizes-selector .wpSirSelectSize:checked').length;
+        
+        $('.wp-sir-sizes-summary').text(
+            `${selectedSizes} of ${totalSizes} size${totalSizes !== 1 ? 's' : ''} selected`
+        );
+    });
+});
+
+function createCurveControl() {
+  const positions = [
+    ['top-left', 'top', 'top-right'],
+    ['left', 'center', 'right'], 
+    ['bottom-left', 'bottom', 'bottom-right']
+  ];
+
+  let html = '<div class="wp-sir-curve-control">';
+  positions.forEach((row, i) => {
+    html += '<div class="wp-sir-curve-row">';
+    row.forEach((pos) => {
+      html += `<button type="button" class="wp-sir-curve-point" data-position="${pos}">
+                <span class="screen-reader-text">${pos}</span>
+              </button>`;
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Insert after position dropdown
+  $('#wp-sir-watermark-position').after(html);
+
+  // Style for the curve control
+  const style = `
+    <style>
+      .wp-sir-curve-control {
+        display: inline-block;
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background: #fff;
+      }
+      .wp-sir-curve-row {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 5px;
+      }
+      .wp-sir-curve-row:last-child {
+        margin-bottom: 0;
+      }
+      .wp-sir-curve-point {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid #ddd;
+        background: #f7f7f7;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      .wp-sir-curve-point:hover {
+        background: #e9e9e9;
+        border-color: #999;
+      }
+      .wp-sir-curve-point.active {
+        background: #2271b1;
+        border-color: #2271b1;
+      }
+      .screen-reader-text {
+        position: absolute;
+        margin: -1px;
+        padding: 0;
+        height: 1px;
+        width: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        border: 0;
+        word-wrap: normal !important;
+      }
+    </style>
+  `;
+  $('head').append(style);
+
+  // Handle curve point clicks
+  $('.wp-sir-curve-point').on('click', function() {
+    const position = $(this).data('position');
+    
+    // Update active state
+    $('.wp-sir-curve-point').removeClass('active');
+    $(this).addClass('active');
+    
+    // Set position dropdown
+    let dropdownValue;
+    switch(position) {
+      case 'top-left':
+        dropdownValue = 'top-left';
+        break;
+      case 'top':
+        dropdownValue = 'top';
+        break;
+      case 'top-right':
+        dropdownValue = 'top-right';
+        break;
+      case 'left':
+        dropdownValue = 'left';
+        break;
+      case 'center':
+        dropdownValue = 'center';
+        break;
+      case 'right':
+        dropdownValue = 'right';
+        break;
+      case 'bottom-left':
+        dropdownValue = 'bottom-left';
+        break;
+      case 'bottom':
+        dropdownValue = 'bottom';
+        break;
+      case 'bottom-right':
+        dropdownValue = 'bottom-right';
+        break;
+    }
+    
+    $('#wp-sir-watermark-position').val(dropdownValue).trigger('change');
+  });
+
+  // Set initial active point based on dropdown
+  function updateCurveFromDropdown() {
+    const currentPosition = $('#wp-sir-watermark-position').val();
+    $('.wp-sir-curve-point').removeClass('active');
+    $(`.wp-sir-curve-point[data-position="${currentPosition}"]`).addClass('active');
+  }
+
+  updateCurveFromDropdown();
+  $('#wp-sir-watermark-position').on('change', updateCurveFromDropdown);
+}
+
+// Initialize curve control when document is ready
+$(document).ready(function() {
+  createCurveControl();
+});
 
 })(jQuery);
 

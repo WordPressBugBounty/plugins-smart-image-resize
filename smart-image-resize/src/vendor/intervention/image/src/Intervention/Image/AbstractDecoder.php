@@ -2,7 +2,7 @@
 
 namespace Intervention\Image;
 
-use GuzzleHttp\Psr7\Stream;
+// use GuzzleHttp\Psr7\Stream;
 use Intervention\Image\Exception\NotReadableException;
 use Psr\Http\Message\StreamInterface;
 
@@ -94,35 +94,35 @@ abstract class AbstractDecoder
      */
     public function initFromStream($stream)
     {
-        if (!$stream instanceof StreamInterface) {
-            $stream = new Stream($stream);
-        }
+        // if (!$stream instanceof StreamInterface) {
+            // $stream = new Stream($stream);
+        // }
 
-        try {
-            $offset = $stream->tell();
-        } catch (\RuntimeException $e) {
-            $offset = 0;
-        }
+        // try {
+        //     $offset = $stream->tell();
+        // } catch (\RuntimeException $e) {
+        //     $offset = 0;
+        // }
 
-        $shouldAndCanSeek = $offset !== 0 && $stream->isSeekable();
+        // $shouldAndCanSeek = $offset !== 0 && $stream->isSeekable();
 
-        if ($shouldAndCanSeek) {
-            $stream->rewind();
-        }
+        // if ($shouldAndCanSeek) {
+        //     $stream->rewind();
+        // }
 
-        try {
-            $data = $stream->getContents();
-        } catch (\RuntimeException $e) {
-            $data = null;
-        }
+        // try {
+        //     $data = $stream->getContents();
+        // } catch (\RuntimeException $e) {
+        //     $data = null;
+        // }
 
-        if ($shouldAndCanSeek) {
-            $stream->seek($offset);
-        }
+        // if ($shouldAndCanSeek) {
+        //     $stream->seek($offset);
+        // }
 
-        if ($data) {
-            return $this->initFromBinary($data);
-        }
+        // if ($data) {
+        //     return $this->initFromBinary($data);
+        // }
 
         throw new NotReadableException(
             "Unable to init from given stream"

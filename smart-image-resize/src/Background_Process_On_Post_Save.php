@@ -13,6 +13,8 @@ final class Background_Process_On_Post_Save {
     
     public function init() {
         add_action('save_post', [$this, 'maybe_queue_image'], 10, 2);
+        add_action('added_post_meta', [$this, 'maybe_queue_image_postmeta'], 10, 3);
+        add_action('updated_post_meta', [$this, 'maybe_queue_image_postmeta'], 10, 3);
         add_action('wp_sir_process_image', [$this, 'process_image']);
         add_action('woocommerce_save_product_variation', [$this, 'process_product_variation_image']);
     }
@@ -50,7 +52,6 @@ final class Background_Process_On_Post_Save {
         require_once ABSPATH . 'wp-admin/includes/image.php';
         
         $meta = \wp_generate_attachment_metadata($image_id, $file_path);
-
         if(!empty($meta) && is_array($meta) && isset($meta['_processed_at'])){
             \wp_update_attachment_metadata($image_id, $meta);
         }
@@ -64,6 +65,40 @@ final class Background_Process_On_Post_Save {
             && function_exists('\as_unschedule_action') 
             && function_exists('\as_enqueue_async_action');
 
+    }
+
+    /**
+     * Process the give image when attached mainly after `set_post_thumbnail` is fired.
+     */
+    public function maybe_queue_image_postmeta($meta_id, $object_id, $meta_key){
+        if ($meta_key !== '_thumbnail_id') {
+            return;
+        }
+
+        if(! $this->_is_background_processing_allowed() ){
+            return;
+        }
+
+        if(! $this->_is_as_available() ){
+            return;
+        }
+
+        $postmeta = \get_metadata_by_mid('post', $meta_id);
+        
+        if( !$postmeta ){
+            return;
+        }
+
+        $post_type = \get_post_type($postmeta->post_id);
+        
+        $process_post_types = \wp_sir_get_processable_post_types();
+
+        if (!in_array($post_type, $process_post_types, true)) {
+            return;
+        }
+
+        $this->_push_to_queue($postmeta->meta_value);
+        
     }
     public function maybe_queue_image($post_id, $post) {
 

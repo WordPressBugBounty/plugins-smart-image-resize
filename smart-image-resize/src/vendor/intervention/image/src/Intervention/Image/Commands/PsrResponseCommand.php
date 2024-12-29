@@ -2,7 +2,7 @@
 
 namespace Intervention\Image\Commands;
 
-use GuzzleHttp\Psr7\Response;
+// use GuzzleHttp\Psr7\Response;
 
 class PsrResponseCommand extends AbstractCommand
 {
@@ -20,26 +20,27 @@ class PsrResponseCommand extends AbstractCommand
      */
     public function execute($image)
     {
-        $format = $this->argument(0)->value();
-        $quality = $this->argument(1)->between(0, 100)->value();
+        // $format = $this->argument(0)->value();
+        // $quality = $this->argument(1)->between(0, 100)->value();
 
         //Encoded property will be populated at this moment
-        $stream = $image->stream($format, $quality);
+        // $stream = $image->stream($format, $quality);
 
-        $mimetype = finfo_buffer(
-            finfo_open(FILEINFO_MIME_TYPE),
-            $image->getEncoded()
-        );
+        // $mimetype = finfo_buffer(
+        //     finfo_open(FILEINFO_MIME_TYPE),
+        //     $image->getEncoded()
+        // );
 
-        $this->setOutput(new Response(
-            200,
-            [
-                'Content-Type'   => $mimetype,
-                'Content-Length' => strlen($image->getEncoded())
-            ],
-            $stream
-        ));
+        // $this->setOutput(new Response(
+        //     200,
+        //     [
+        //         'Content-Type'   => $mimetype,
+        //         'Content-Length' => strlen($image->getEncoded())
+        //     ],
+        //     $stream
+        // ));
 
-        return true;
+        // return true;
+        return false;
     }
 }

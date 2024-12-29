@@ -16,14 +16,16 @@ class Generated_Sizes extends Base_Filter
     }
 
     /**
-     * Set generatable sizes.
-     * This will free-up disk space from unused sizes.
+     * Remove unwanted image sizes from the list of sizes to be generated.
      *
-     * @param array $sizes
-     * @param array $metadata
-     * @param null $image_id
+     * This method filters the list of image sizes to be generated, keeping only
+     * the sizes that are configured in the plugin settings and not excluded.
      *
-     * @return array
+     * @param array $sizes    An array of image sizes.
+     * @param array $metadata An array of image metadata.
+     * @param int|null $image_id The ID of the attachment, or null if not available.
+     *
+     * @return array The filtered array of image sizes.
      */
     public function removeUnwantedSizes($sizes, $metadata, $image_id = null)
     {
@@ -37,24 +39,20 @@ class Generated_Sizes extends Base_Filter
             $image_meta = new Image_Meta($image_id, $metadata);
 
             $isProcessable = $this->isProcessable($image_id, $image_meta);
-
-            // Since this filter is applied multiple times
-            // we need to cache result to improve performances when it's used later.
             wp_cache_add('processable_image_'.$image_id, ($isProcessable ? 'yes' : 'no'), 'wp_sir_cache');
             
-            $filtered = [];
-
             if ($isProcessable) {
                 $settings = wp_sir_get_settings();
                 $excluded = _wp_sir_get_excluded_sizes();
-                foreach($sizes as $size_name => $size) {
-                    if (in_array($size_name, $settings['sizes']) && in_array($size_name, $excluded)) {
-                        $filtered[$size_name] = $size;
-                    }
+                if (empty($excluded)) {
+                    $filtered = array_intersect_key($sizes, array_flip($settings['sizes']));
+                } else {
+                    $filtered = array_intersect_key($sizes, array_flip(array_intersect($settings['sizes'], $excluded)));
                 }
                 return $filtered;
             }
         } catch (Invalid_Image_Meta_Exception $e) {
+            error_log($e->getMessage());
         }
 
         return $sizes;

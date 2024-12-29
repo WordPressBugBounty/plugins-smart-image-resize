@@ -13,13 +13,14 @@ class StreamCommand extends AbstractCommand
      */
     public function execute($image)
     {
-        $format = $this->argument(0)->value();
-        $quality = $this->argument(1)->between(0, 100)->value();
+        // $format = $this->argument(0)->value();
+        // $quality = $this->argument(1)->between(0, 100)->value();
 
-        $this->setOutput(\GuzzleHttp\Psr7\stream_for(
-            $image->encode($format, $quality)->getEncoded()
-        ));
+        // $this->setOutput(\GuzzleHttp\Psr7\stream_for(
+        //     $image->encode($format, $quality)->getEncoded()
+        // ));
 
-        return true;
+        // return true;
+        return false;
     }
 }

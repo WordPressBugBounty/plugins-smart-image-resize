@@ -1,15 +1,14 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Donate link: https://paypal.me/nlemsieh
 Tags: woocommerce, product image resize, square image, same image size, cropped image, fix image crop, square thumbnail, resize image, picture resize, uniform image, same size, category image size, image resize without cropping, image resize, resize thumbnails, aspect ratio image, unwanted image size, fit image, fit image size, fit image dimensions, insert watermark, image white space, image empty space
 Requires at least: 4.0
-Tested up to: 6.6 
+Tested up to: 6.7 
 WC requires at least: 3.0
-WC tested up to: 9.3
+WC tested up to: 9.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.8.1
+Stable tag: 1.10.0
 
 Make WooCommerce product images the same size and uniform without cropping. No more manual image editing and photo resizing.
 
@@ -149,6 +148,17 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 4. Add custom background color of the new area.
 
 == Changelog ==
+
+= 1.10.0 = 
+
+* Added support for Phlox theme.
+* Added an option to prevent upscaling of small images.
+* Introduced a dedicated "Help" tab featuring setup guides and troubleshooting resources.
+* Addressed an issue with some thumbnail regeneration plugins not using the edited version of images modified in WordPress's built-in image editor
+* Enhanced the settings page to improve user experience.
+* Process image when `set_post_thumbnail` is called.
+* Improved compatibility with PHP 8.3
+* Various minor bugfixes and stability improvements
 
 = 1.8.1 = 
 

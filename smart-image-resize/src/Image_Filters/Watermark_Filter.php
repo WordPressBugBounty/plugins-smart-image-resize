@@ -12,7 +12,17 @@ class Watermark_Filter implements FilterInterface
 {   
 
     private function is_position_supported($position){
-        $supported_positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+        $supported_positions = [
+            'top-left',
+            'top',
+            'top-right',
+            'left',
+            'center',
+            'right',
+            'bottom-left',
+            'bottom',
+            'bottom-right'
+        ];  
         return in_array($position, $supported_positions);
     }
 
@@ -23,6 +33,9 @@ class Watermark_Filter implements FilterInterface
      */
     public function applyFilter(Image $image)
     {
+        /*
+        LITE-ONLY:START
+        */
         $settings = wp_sir_get_settings();
 
         if (!$settings['enable_watermark']) {
@@ -94,6 +107,10 @@ class Watermark_Filter implements FilterInterface
             $image->insert($wm, $position, $offset_x, $offset_y);
         } catch (\Exception $e) {
         }
+
+        /*
+        LITE-ONLY:END
+        */
         return $image;
     }
 }

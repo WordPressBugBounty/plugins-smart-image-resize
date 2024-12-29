@@ -91,7 +91,7 @@ class Env {
             return $default;
         }
 
-        $filtered = apply_filters('wp_sir_driver', $default);
+        $filtered = apply_filters('wp_sir_driver', get_option('wp_sir_image_processor', $default));
 
         if ( in_array( strtolower( $filtered ), [ 'imagick', 'gd' ], true ) ) {
             return $filtered;

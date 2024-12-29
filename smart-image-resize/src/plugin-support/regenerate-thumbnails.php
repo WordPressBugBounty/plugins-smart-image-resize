@@ -1,4 +1,5 @@
 <?php
+namespace WP_Smart_Image_Resize\Plugin_Support;
 
 /*
 |--------------------------------------------------------------------------

@@ -13,6 +13,7 @@ function _wp_sir_get_default_sizes() {
         function ($sizeName) {
             if (wp_sir_is_woocommerce_activated()) {
                 return in_array($sizeName, [
+                    'woocommerce_archive_thumbnail',
                     'woocommerce_single',
                     'woocommerce_thumbnail',
                     'woocommerce_gallery_thumbnail',
@@ -32,12 +33,12 @@ function _wp_sir_get_default_settings() {
     return [
         'enable'                => 1,
         'bg_color'              => '#ffffff',
-        'jpg_quality'           => 5,
+        'jpg_quality'           => 0,
         'sizes'                 => _wp_sir_get_default_sizes(),
         'jpg_convert'           => 0,
         'enable_webp'           => 0,
         'enable_trim'           => 0,
-        'trim_feather'          => 10,
+        'trim_feather'          => 0,
         'trim_tolerance'        => 3,
         'processable_images'    => [
             'post_types' => ['product'],
@@ -54,6 +55,7 @@ function _wp_sir_get_default_settings() {
             'x'=> 0
         ],
         'crop_mode'=> 'pad', //@experimental
+        'disable_upscale'=> 0,
     ];
 }
 if (!function_exists('wp_sir_get_settings')) {
@@ -193,7 +195,7 @@ if (!function_exists('wp_sir_get_additional_sizes')) :
         }
         $order = [
             'woocommerce_thumbnail', 'woocommerce_single', 'woocommerce_gallery_thumbnail',
-            'shop_catalog', 'shop_single', 'shop_thumbnail', 'thumbnail', 'medium', 'medium_large', 'large'
+            'shop_catalog', 'shop_single', 'shop_thumbnail', 'woocommerce_archive_thumbnail', 'thumbnail', 'medium', 'medium_large', 'large'
         ];
 
         $sorted_sizes = [];
@@ -423,9 +425,7 @@ if (!function_exists('wp_sir_is_processable')) {
      * @todo Use screen `async-upload` instead.
      */
     function wp_sir_is_attachment_upload() {
-        $upload_attachment = filter_input(INPUT_POST, 'action', FILTER_SANITIZE_STRING);
-
-        return 'upload-attachment' === $upload_attachment || isset($_POST['post_id']);
+       return (isset($_POST['action']) && $_POST['action'] === 'upload-attachment') || isset($_POST['post_id']);
     }
 
     /**
