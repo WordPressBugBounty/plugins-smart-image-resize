@@ -8,7 +8,7 @@ WC tested up to: 9.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 
 Make WooCommerce product images the same size and uniform without cropping. No more manual image editing and photo resizing.
 
@@ -149,6 +149,9 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 
 == Changelog ==
 
+= 1.10.1 = 
+
+* Resolved an issue that caused some sites to break after updating to v1.10.0 due to a file not being properly deployed to WordPress.org.
 = 1.10.0 = 
 
 * Added support for Phlox theme.
@@ -530,6 +533,6 @@ Improve stability
 
  == Upgrade Notice ==
 
-  = 1.6.0 =
+  = 1.10.1 =
 
-* Added the ability to use a specific resizing mode for each size.
+* This update is recommended for users who upgraded to v1.10.0 and experienced fatal error that caused their sites to break.
