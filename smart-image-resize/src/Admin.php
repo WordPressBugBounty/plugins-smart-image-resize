@@ -296,7 +296,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'before_section' => '<div class="sir-settings-section">',
                 'after_section'=>'</div>',
             ]);
-            add_settings_section('wp_sir_settings_watermark', 'Watermark <span class="wp-sir-pro-badge">PRO</span> <a href="https://sirplugin.com"  class="_wp-link">Upgrade to PRO</a>', null, WP_SIR_NAME, [
+            add_settings_section('wp_sir_settings_watermark', 'Watermark <a href="https://sirplugin.com"  class="_wp-link">Upgrade to PRO</a>', null, WP_SIR_NAME, [
             'before_section' => '<div class="sir-settings-section">',
              'after_section'=>'</div>'
          ]);
@@ -393,7 +393,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             // Register `Convert to JPG format` field.
             add_settings_field(
                 'wp_sir_settings_jpg_convert',
-                'PNG-JPG Conversion <span class="wp-sir-pro-badge">PRO</span>',
+                'PNG-JPG Conversion',
                 [$this, 'settings_field_jpg_convert'],
                 WP_SIR_NAME,
                 'wp_sir_settings_optimization'
@@ -402,7 +402,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             // Register `Enable WebP format` field.
             add_settings_field(
                 'wp_sir_settings_enable_webp',
-                'Convert & Display WebP Images <span class="wp-sir-pro-badge">PRO</span>',
+                'Convert & Display WebP Images',
                 [$this, 'settings_field_enable_webp'],
                 WP_SIR_NAME,
                 'wp_sir_settings_optimization'
@@ -441,6 +441,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                    name="wp_sir_settings[trim_tolerance]" 
                                    value="<?php echo esc_attr($settings['trim_tolerance']); ?>"
                                    class="wp-sir-range-input"
+                                   id="wp-sir-trim-tolerance"
                                    data-value-display="wp-sir-tolerance-value" />
                             <span id="wp-sir-tolerance-value"><?php echo esc_html($settings['trim_tolerance']); ?>%</span>
                         </label>
@@ -473,10 +474,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             <script>
             jQuery(document).ready(function($) {
                 // Update tolerance value display and feedback
-                $('.wp-sir-range-input').on('input', function() {
+                $('#wp-sir-trim-tolerance').on('input', function() {
                     var value = parseInt($(this).val());
                     $('#' + $(this).data('value-display')).text(value + '%');
-                    
                     var $feedback = $('.wp-sir-tolerance-feedback');
                     
                     if (value > 50) {
@@ -969,7 +969,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                     <ul class="wp-sir-help-links">
                         <li>
                             <span class="dashicons dashicons-book"></span>
-                            <a href="https://sirplugin.com/documentation" target="_blank">
+                            <a href="https://sirplugin.com/docs" target="_blank">
                                 <?php _e('Documentation', 'wp-smart-image-resize'); ?>
                             </a>
                         </li>

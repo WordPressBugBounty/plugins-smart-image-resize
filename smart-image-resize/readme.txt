@@ -1,6 +1,6 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Tags: woocommerce, product image resize, square image, same image size, cropped image, fix image crop, square thumbnail, resize image, picture resize, uniform image, same size, category image size, image resize without cropping, image resize, resize thumbnails, aspect ratio image, unwanted image size, fit image, fit image size, fit image dimensions, insert watermark, image white space, image empty space
+Tags: WooCommerce image resize, image resizing for WooCommerce, resize product thumbnails, product image optimizer, square product images, uniform image sizes, consistent thumbnail sizes, image cropping solution, fix distorted images, adjust image dimensions, image aspect ratio tool, add whitespace to images
 Requires at least: 4.0
 Tested up to: 6.7 
 WC requires at least: 3.0
@@ -8,7 +8,7 @@ WC tested up to: 9.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.10.1
+Stable tag: 1.10.2
 
 Make WooCommerce product images the same size and uniform without cropping. No more manual image editing and photo resizing.
 
@@ -59,12 +59,9 @@ If you have already uploaded product images to Media Library, follow these steps
 
 For more details, [visit the documentation](https://sirplugin.com/guide.html?utm_source=wp&utm_medium=link&utm_campaign=lite_version).
 
-**IMPORTANT:**
-_The Regenerate Thumbnails plugin may display the message "This plugin hasn't been tested with the latest 3 major releases of WordPress." However, it has been thoroughly tested with the latest version and works as expected. We're also working on a new plugin, [Rethumbify](http://rethumbify.com/), which will offer advanced features such as background processing and pause & resume functionality for even better performance. Stay tuned!_
-
 #### Explore Our Other plugins:
 [HurryTimer](https://wordpress.org/plugins/hurrytimer/) – A versatile countdown timer to create urgency and scarcity that drives clicks, increases sales, highlights upcoming events or deadlines.
-[Rethumbify](http://rethumbify.com/) – An upcoming tool to regenerate thumbnails with background processing, pause&resume, and more.
+[Rethumbify](http://rethumbify.com/) – An upcoming tool to regenerate thumbnails with background processing, pause & resume, selective regeneration, onld/unused thumbnails cleanup, and more.
 
 == Installation ==
 
@@ -149,9 +146,11 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 
 == Changelog ==
 
-= 1.10.1 = 
 
-* Resolved an issue that caused some sites to break after updating to v1.10.0 due to a file not being properly deployed to WordPress.org.
+= 1.10.2 = 
+
+* Various improvements and bugfixes.
+
 = 1.10.0 = 
 
 * Added support for Phlox theme.
@@ -533,6 +532,6 @@ Improve stability
 
  == Upgrade Notice ==
 
-  = 1.10.1 =
+  = 1.6.0 =
 
-* This update is recommended for users who upgraded to v1.10.0 and experienced fatal error that caused their sites to break.
+* Added the ability to use a specific resizing mode for each size.
