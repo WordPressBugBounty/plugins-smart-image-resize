@@ -248,10 +248,6 @@ var WP_SIR_UTIL = {
     }
   });
 
-  if ($.fn.tipTip) {
-    $('.wp-sir-help-tip').tipTip();
-  }
-
 
   $(document).on('click', '#wp-sir-open-media-uploader', function (e) {
     var frame;
@@ -530,16 +526,18 @@ var WP_SIR_UTIL = {
       $('.wp-sir-trim-advanced-settings').toggle($(this).prop('checked'));
   });
     
-    
     $('.wp-sir-watermark-size').trigger('input');
     
     // Initialize tooltips
-    $('.wp-sir-help-tip').tipTip({
+    if($.fn.tipTip)
+    {
+      $('.wp-sir-help-tip').tipTip({
         'attribute': 'title',
         'fadeIn': 50,
         'fadeOut': 50,
         'delay': 200
     });
+    }
 
     // Handle sizes section toggle
     $('.wp-sir-toggle-sizes').on('click', function() {
@@ -695,6 +693,20 @@ function createCurveControl() {
 // Initialize curve control when document is ready
 $(document).ready(function() {
   createCurveControl();
+});
+
+$('.wp-sir-tabs div').on('click', function(e) {
+  e.preventDefault();
+  $('.wp-sir-tabs div').removeClass('active');
+  $(this).addClass('active');
+  if($(this).data('tab') === 'general'){
+    console.log('general');
+    $('.sir-settings-general >table>tbody>tr:not(.wp-sir-is-advanced)').removeClass('hidden');
+    $('.sir-settings-general >table>tbody>tr.wp-sir-is-advanced').addClass('hidden');
+  }else{
+    $('.sir-settings-general >table>tbody>tr:not(.wp-sir-is-advanced)').addClass('hidden');
+    $('.sir-settings-general >table>tbody>tr.wp-sir-is-advanced').removeClass('hidden');
+  }
 });
 
 })(jQuery);

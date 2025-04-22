@@ -37,6 +37,7 @@ function _wp_sir_get_default_settings() {
         'sizes'                 => _wp_sir_get_default_sizes(),
         'jpg_convert'           => 0,
         'enable_webp'           => 0,
+        // 'enable_avif'           => 0,
         'enable_trim'           => 0,
         'trim_feather'          => 0,
         'trim_tolerance'        => 3,

@@ -1,47 +1,48 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Tags: WooCommerce image resize, image resizing for WooCommerce, resize product thumbnails, product image optimizer, square product images, uniform image sizes, consistent thumbnail sizes, image cropping solution, fix distorted images, adjust image dimensions, image aspect ratio tool, add whitespace to images
+Tags: woocommerce, product image resize, uniform product images, smart image cropping, fix image crop, square product image, same image size, resize thumbnails, fit images to size, correct image dimensions, insert image watermark, product image optimization
 Requires at least: 4.0
-Tested up to: 6.7 
-WC requires at least: 3.0
-WC tested up to: 9.5
+Tested up to: 6.8
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.10.2
+Stable tag: 1.12.0
 
-Make WooCommerce product images the same size and uniform without cropping. No more manual image editing and photo resizing.
+Make your WooCommerce product images uniform in size automatically. Fix inconsistent layouts and cut-off images without manual editing.
 
 == Description ==
 
-[Smart Image Resize](https://sirplugin.com/) Makes your store look professional with product images that are all uniform and the same size without cropping.
+[Smart Image Resize](https://sirplugin.com/) automatically resizes and adjusts WooCommerce product images to create a clean, uniform look — without manual editing or bad cropping.
 
-- Zero-configuration.
-- No more manual image editing and photo resizing.
+- Instantly make product images the same size.
+- Improve store design with consistent, professional-looking grids.
 
+Save hours of manual work and deliver a polished, trustworthy shopping experience.
+
+[Learn more about Smart Image Resize](https://sirplugin.com/)
 
 ### Lite Features
 
-- Resize up to 150 images.
-- Remove unwanted whitespace around image.
-- Set a custom background color to match your site design
-- Compress thumbnails for faster page load.
-- Generate only needed thumbnails and delete unused ones.
-- Choose which images to resize.
+- ✅ Resize up to 150 product images automatically.
+- ✅ Remove unwanted white space to keep products centered and clean.
+- ✅ Add custom background colors to match your store's branding.
+- ✅ Compress thumbnails to boost site loading speed.
+- ✅ Generate only necessary thumbnails and remove unused ones.
+- ✅ Select specific images to resize for more control.
 
 ### Pro Features
 
-- **♾ Unlimited Images:**  Unlimited images resizing.
+- **♾ Unlimited Images Resizing:**  Resize unlimited WooCommerce product images effortlessly.
 
--  **✈️ Convert to JPG format:** Reduce image file size and boost page speed.
+-  **✈️ Convert PNG Images to JPG format:** Reduce file size while keeping high quality.
 
-- **🚀 Use WebP Images:** Speed up page load by reduce image file up to 90% while still providing transparency and the same quality.
+- **🚀 Serve WebP Images:** Deliver modern, faster-loading images with transparency support.
 
-- **🔒Insert watermark:** Insert logo, name, SKU, and other info on all images, attracting new potential customers through search engines, and keep images safe from unauthorized use (especially if you sell digital products or if you want to keep the copyright safe for the images you publish online such as photos, pictures, comic strips, etc.)
-- **👨‍💻 Get priority support:**
-Get faster chat and email support.
+- **🔒Insert Watermarks:** Add logo on all images, attracting new potential customers through search engines, and keep images safe from unauthorized use (especially if you sell digital products or if you want to keep the copyright safe for the images you publish online such as photos, pictures, comic strips, etc.)
+- **🛟 Priority Support:**
+Get faster, dedicated help via chat and email.
 
-[Check out Smart Image Resize PRO!](https://sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version)
+[Upgrade to Smart Image Resize PRO!](https://sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version)
 
 ### Usage
 
@@ -61,7 +62,7 @@ For more details, [visit the documentation](https://sirplugin.com/guide.html?utm
 
 #### Explore Our Other plugins:
 [HurryTimer](https://wordpress.org/plugins/hurrytimer/) – A versatile countdown timer to create urgency and scarcity that drives clicks, increases sales, highlights upcoming events or deadlines.
-[Rethumbify](http://rethumbify.com/) – An upcoming tool to regenerate thumbnails with background processing, pause & resume, selective regeneration, onld/unused thumbnails cleanup, and more.
+[ReThumbify](http://rethumbify.com/) – An upcoming tool to regenerate thumbnails with background processing, pause & resume, selective regeneration, onld/unused thumbnails cleanup, and more.
 
 == Installation ==
 
@@ -146,6 +147,13 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 
 == Changelog ==
 
+= 1.12.0 = 
+
+* Introduced a new filter `wp_sir_exclude_trim_sizes` that allows excluding certain image sizes from the whitespace trimming functionality.
+* Added support for AVIF format.
+* Admin tweaks for better user experience.
+* Fixed a compatibility issue with the new version of the Phlox theme.
+* Various improvements and bugfixes.
 
 = 1.10.2 = 
 

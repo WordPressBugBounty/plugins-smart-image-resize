@@ -104,6 +104,40 @@ class Encoder extends AbstractEncoder
         return $imagick->getImagesBlob();
     }
 
+    protected function processAvif()
+    {
+        if ( ! \Imagick::queryFormats('AVIF')) {
+            throw new NotSupportedException(
+                "Avif format is not supported by Imagick installation."
+            );
+        }
+
+        $format = 'avif';
+        $compression = \Imagick::COMPRESSION_JPEG;
+
+        $imagick = $this->image->getCore();
+
+        // Backward compat with Imagick 6.x
+        if(version_compare(Env::getImagickVersion(), '7', '<')) {
+            $color = maybe_hash_hex_color(strtolower(wp_sir_get_settings()['bg_color']));
+            if(empty($color) && is_callable(array($imagick, 'getImageAlphaChannel')) &&  !$imagick->getImageAlphaChannel()){ 
+                $color = 'white';
+            }
+        }
+        
+        $color = !empty($color) ? new \ImagickPixel($color) : new \ImagickPixel('none');
+        $imagick->setImageBackgroundColor($color);
+
+        $imagick = $imagick->mergeImageLayers(\Imagick::LAYERMETHOD_FLATTEN);
+        $imagick->setFormat($format);
+        $imagick->setImageFormat($format);
+        $imagick->setCompression($compression);
+        $imagick->setImageCompression($compression);
+        $imagick->setImageCompressionQuality($this->quality);
+
+        return $imagick->getImagesBlob();
+    }
+
     /**
      * Processes and returns encoded image as TIFF string
      *

@@ -198,8 +198,17 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 @set_time_limit(0);
 
                 $imageMeta->setMimeType($image->mime());
+                
+                $_untrimmed_image = null;
+                
+                $exclude_trim_sizes = (array)apply_filters('wp_sir_exclude_trim_sizes', [], $imageId);
 
+                if( !empty( $exclude_trim_sizes ) ){
+                    $_untrimmed_image = clone $image;
+                }
+                
                 $image->filter(new Trim_Filter($imageMeta));
+
 
                 $imageMeta->setBackup();
 
@@ -233,7 +242,11 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                         continue;
                     }
 
-                    $thumb_object = clone $image;
+                    if(in_array($sizeName, $exclude_trim_sizes) && ! is_null($_untrimmed_image)){
+                        $thumb_object = clone $_untrimmed_image;
+                    }else{
+                        $thumb_object = clone $image;
+                    }
                     $thumb_object = $thumb_object->filter(new Thumbnail_Filter($sizeName, $sizeData));
                     
 

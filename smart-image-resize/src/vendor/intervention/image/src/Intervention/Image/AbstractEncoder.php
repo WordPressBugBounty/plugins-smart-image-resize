@@ -83,6 +83,15 @@ abstract class AbstractEncoder
      * @return string
      */
     abstract protected function processWebp();
+    
+
+    /**
+     * Processes and returns image as AVIF encoded string
+     *
+     * @return string
+     */
+
+    abstract protected function processAvif();
 
     /**
      * Process a given image
@@ -167,6 +176,10 @@ abstract class AbstractEncoder
             case 'image/webp':
             case 'image/x-webp':
                 $this->result = $this->processWebp();
+                break;
+            case 'avif':
+            case 'image/avif':
+                $this->result = $this->processAvif();
                 break;
                 
             default:

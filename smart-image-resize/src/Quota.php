@@ -94,7 +94,7 @@ final class Quota
         <?php echo self::isExceeded() ? 'isExceeded' : '' ?>
         "><span style="width: <?php echo self::get_consumed() ?>px"></span></span>
         <span><?php echo self::get_consumed() ?> <?php echo self::get_consumed() == 1 ? 'image' : 'images' ?> of <?php echo self::get_initial_credits() ?> processed <span class="wp-sir-help-tip" title='To see processed images, apply the filter "Smart Resize: Processed" in your media library.'></span>
-<a target="_blank" href="https://sirplugin.com/#pro">Upgrade to PRO for unlimited images</a>.</span>
+( <a target="_blank" href="https://sirplugin.com/#pro">Upgrade to PRO</a> for Unlimited Images ).</span>
        
       </div>
       <?php

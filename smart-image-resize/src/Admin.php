@@ -42,8 +42,12 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             add_action('admin_notices', [$this, 'fileinfo_not_enabled']);
             add_action('admin_notices', [$this, 'phpversion_not_supported']);
             add_action('admin_notices', [$this, 'show_background_processing_notice']);
-            add_action('admin_notices',[$this,  'show_settings_saved_notice']);
-            add_action('admin_init', [$this, 'plugin_settings_saved']);
+            // add_action('admin_notices',[$this,  'show_settings_saved_notice']);
+            add_action('admin_init', [$this, 'show_settings_saved_notice']);
+            
+            // Handle settings form submission
+            add_action('admin_init', [$this, 'handle_settings_form_submission'], 5);
+            
             
             add_action('admin_notices', [$this, 'quota_exceeding_soon']);
             add_action('admin_notices', [$this, 'quota_exceeded_notice']);
@@ -180,7 +184,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
 
             
-            $links[] = '<a href="https://sirplugin.com/?utm_source=plugin&utm_medium=installed_plugins&utm_campaign=go_pro" target="_blank" style="font-weight:bold;color:#38b2ac">Go Pro</a>';
+            $links[] = '<a href="https://sirplugin.com/?utm_source=plugin&utm_medium=installed_plugins&utm_campaign=go_pro" target="_blank" style="font-weight:bold;color:#f97316">Go Pro</a>';
             
 
             return $links;
@@ -191,6 +195,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'enable'      => 0,
                 'jpg_convert' => 0,
                 'enable_webp' => 0,
+                // 'enable_avif' => 0,
                 'enable_trim' => 0,
                 'enable_watermark' => 0,
             ];
@@ -223,6 +228,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
               $settings['enable_watermark'] = 0;
               $settings['jpg_convert'] = 0;
               $settings['enable_webp'] = 0;
+            //   $settings['enable_avif'] = 0;
               
               return $settings;
 
@@ -289,24 +295,31 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             add_settings_section('wp_sir_settings_general', 'Uniformity' , null, WP_SIR_NAME, [
                 'before_section' => '<div class="sir-settings-section sir-settings-general">',
                 'after_section'=>'</div>',
-                'title'=> '<span>Uniformity</span>'
+                'title'=> '<span>Uniformity</span>
+                    <span class="wp-sir-tabs">
+                    <div class="wp-sir-tab active" data-tab="general">General</div>
+                    <div class="wp-sir-tab" data-tab="advanced">Advanced</div>
+                    </span>'
             ]);
 
-            add_settings_section('wp_sir_settings_advanced', 'Advanced' , null, WP_SIR_NAME, [
-                'before_section' => '<div class="sir-settings-section">',
-                'after_section'=>'</div>',
-            ]);
-            add_settings_section('wp_sir_settings_watermark', 'Watermark <a href="https://sirplugin.com"  class="_wp-link">Upgrade to PRO</a>', null, WP_SIR_NAME, [
+            $watermark_section_title = 'Watermark';
+            
+             
+             $watermark_section_title.= ' <span class="wp-sir-pro-badge">PRO</span>';
+             
+
+            add_settings_section('wp_sir_settings_watermark', $watermark_section_title, null, WP_SIR_NAME, [
             'before_section' => '<div class="sir-settings-section">',
              'after_section'=>'</div>'
-         ]);
+            ]);
+            
             add_settings_section('wp_sir_settings_optimization', 'Optimization', null, WP_SIR_NAME,[
                    'before_section' => '<div class="sir-settings-section">',
                 'after_section'=>'</div>'
             ]);
            
             add_settings_field(
-                'wp_sir_disable_upscale',
+                'wp_sir_enable',
                 __('Enable', 'wp-smart-image-resize'),
                 [$this, 'settings_field_enable'],
                 WP_SIR_NAME,
@@ -319,7 +332,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                     __('Cropping Mode<span class="wp-sir-help-tip" title="Choose how to crop or resize your images for a uniform look. (Experimental)"></span>', WP_SIR_NAME),
                     [$this, 'settings_field_cropping_mode'],
                     WP_SIR_NAME,
-                    'wp_sir_settings_general'
+                    'wp_sir_settings_general',
+                    ['class'=>'hidden wp-sir-is-advanced']
                 );
             }
     
@@ -339,7 +353,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'Background Color',
                 [$this, 'settings_field_bg_color'],
                 WP_SIR_NAME,
-                'wp_sir_settings_general'
+                'wp_sir_settings_general',
+                ['class'=>'hidden wp-sir-is-advanced']
             );
 
             
@@ -360,7 +375,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 __('Image Sizes', WP_SIR_NAME),
                 [$this, 'settings_field_sizes'],
                 WP_SIR_NAME,
-                'wp_sir_settings_advanced'
+                'wp_sir_settings_general',
+                ['class'=>'hidden wp-sir-is-advanced']
             );
 
             add_settings_field(
@@ -368,7 +384,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 __('Disable Image Upscaling', 'wp-smart-image-resize'),
                 [$this, 'settings_field_disable_upscale'],
                 WP_SIR_NAME,
-                'wp_sir_settings_advanced'
+                'wp_sir_settings_general',
+                ['class'=>'hidden wp-sir-is-advanced']
             );
             
             add_settings_field(
@@ -390,20 +407,29 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'wp_sir_settings_optimization'
             );
 
+            $png2jpg_title = 'PNG-JPG Conversion';
+            
+            $png2jpg_title .= ' <span class="wp-sir-pro-badge">PRO</span>';
+            
+
             // Register `Convert to JPG format` field.
             add_settings_field(
                 'wp_sir_settings_jpg_convert',
-                'PNG-JPG Conversion',
+                $png2jpg_title,
                 [$this, 'settings_field_jpg_convert'],
                 WP_SIR_NAME,
                 'wp_sir_settings_optimization'
             );
 
+            $nextgen_format_title = 'Convert and Display WebP Images';
+            
+            $nextgen_format_title .= ' <span class="wp-sir-pro-badge">PRO</span>';
+            
             // Register `Enable WebP format` field.
             add_settings_field(
                 'wp_sir_settings_enable_webp',
-                'Convert & Display WebP Images',
-                [$this, 'settings_field_enable_webp'],
+                $nextgen_format_title,
+                [$this, 'settings_field_enable_nextgen_format'],
                 WP_SIR_NAME,
                 'wp_sir_settings_optimization'
             );
@@ -423,7 +449,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                            value="1" />
                 </label>
                 <p class="description">
-                    <?php _e('Automatically remove unnecessary empty space around images to create a clean, uniform appearance.', 'wp-smart-image-resize'); ?>
+                    <?php _e('Remove excess space from around images to create a clean, uniform appearance.', 'wp-smart-image-resize'); ?>
                 </p>
 
                 <!-- Advanced trim settings container -->
@@ -619,11 +645,11 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                                                                                         'product_cat',
                                                                                                         $settings['processable_images']['taxonomies'],
                                                                                                         true
-                                                                                                    ) ? 'checked' : ''; ?> id="wp-sir-processable-images-product-cat"  value="product_cat" /> <span style="display:inline-block">Category images</span>
+                                                                                                    ) ? 'checked' : ''; ?> id="wp-sir-processable-images-product-cat"  value="product_cat" /> <span style="display:inline-block">Product category images</span>
                 </label>
             </div>
             <p class="description">
-                <?php _e('Select which images to resize.', 'wp-smart-image-resize'); ?>
+                <?php _e('Choose which image types should be resized.', 'wp-smart-image-resize'); ?>
             </p>
         <?php
         }
@@ -633,38 +659,47 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             <label for="wp-sir-jpg-convert">
                 <input type="checkbox" name="wp_sir_settings[jpg_convert]" <?php checked($settings['jpg_convert'], 1); ?> id="wp-sir-jpg-convert" class="wp-sir-as-toggle"  disabled  value="1" />
                 
-                <a target="_blank" href="https://sirplugin.com?utm_source=plugin&utm_medium=upgrade&utm_campaign=jpg_convert"><?php _e(
-                                                                                                                                    'Upgrade to PRO',
-                                                                                                                                    WP_SIR_NAME
-                                                                                                                                ); ?></a>
                 
             </label>
             <p class="description">
                 <?php _e(
-                    "Convert PNG to JPG to reduce file size and improve page speed.",
+                    "Unlock faster loading times and enhanced performance by converting PNG images to optimized JPGs.",
                     WP_SIR_NAME
                 ); ?>
             </p>
         <?php
         }
 
-        function settings_field_enable_webp() {
+        function settings_field_enable_nextgen_format(){
             $settings = \wp_sir_get_settings(); ?>
-            <label for="wp-sir-enable-webp">
-                <input type="checkbox" name="wp_sir_settings[enable_webp]" <?php checked($settings['enable_webp'], 1); ?> id="wp-sir-enable-webp" class="wp-sir-as-toggle"  disabled  value="1" />
+            <label><input type="checkbox" name="wp_sir_settings[enable_webp]" <?php checked($settings['enable_webp'], 1); ?> id="wp-sir-enable-webp" class="wp-sir-as-toggle"   
+                                                                                                                                                                            disabled
+                                                                                                                                                                             value="1" />
+                                                                                                                                                                                        </label>
+        <p class="description">
+        WebP format significantly reduces image file size by up to 90% compared to PNG, maintaining high quality. 
+        </p>                                                                                                                                                                           
+                                                                                                                                                                                        <?php
+        }
+
+        function settings_field_enable_nextgen_format_avif() {
+            $settings = \wp_sir_get_settings(); ?>
+            <label>
+                WebP <input type="checkbox" name="wp_sir_settings[enable_webp]" <?php checked($settings['enable_webp'], 1); ?> id="wp-sir-enable-webp" class="wp-sir-as-toggle"    value="1" />
+                                                                                                                                                                                        </label>
+&nbsp;                                                                                                                                                                                        AVIF  <input type="checkbox" name="wp_sir_settings[enable_avif]" <?php checked($settings['enable_avif'], 1); ?> id="wp-sir-enable-avif" class="wp-sir-as-toggle"    value="1" />
+                                                                                                                                                                                        </plabel>
                 
-                <a target="_blank" href="https://sirplugin.com?utm_source=plugin&utm_medium=upgrade&utm_campaign=enabled_webp"><?php _e(
-                                                                                                                                    'Upgrade to PRO',
-                                                                                                                                    WP_SIR_NAME
-                                                                                                                                ); ?></a>
-                
+               
 
             </label>
             <p class="description">
-                <?php _e(
-                    "WebP delivers up to 90% smaller file sizes than PNG with no quality loss.<br>Automatically falls back to JPEG/PNG for browsers without WebP support.",
-                    WP_SIR_NAME
-                ); ?>
+            AVIF: Maximum Optimization – Up to 50% Smaller than WebP.
+<br>
+WebP: Up to 90% Smaller than PNG.
+<br>
+We automatically serve the best format to ensure optimal performance.
+
             </p>
             
         <?php
@@ -1117,5 +1152,35 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
             wp_send_json_success();
         }
+
+        /**
+         * Handle settings form submission and redirect if needed
+         */
+        public function handle_settings_form_submission() {
+            // Check if we're saving our plugin's settings
+            if (!isset($_POST['option_page']) || $_POST['option_page'] !== WP_SIR_NAME) {
+                return;
+            }
+
+            // Check if bulk resize button was clicked
+            if (!isset($_POST['submit_and_bulk_resize'])) {
+                return;
+            }
+
+            // Add a flag to redirect after settings are saved
+            add_filter('wp_redirect', function($location) {
+                if(defined('RETHUMBIFY_VERSION')){
+                    return admin_url('tools.php?page=rethumbify');
+                }elseif(in_array('regenerate-thumbnails/regenerate-thumbnails.php',
+                        apply_filters('active_plugins', get_option('active_plugins')))){
+                    return admin_url('tools.php?page=regenerate-thumbnails');
+                }else{
+                    return admin_url('admin.php?page=wp-smart-image-resize&tab=bulk-regenerate');
+                }
+                
+                return $location;
+            });
+        }
     }
 endif;
+

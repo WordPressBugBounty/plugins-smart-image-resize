@@ -13,13 +13,21 @@ if ( function_exists( 'auxshp_get_product_thumbnail' ) ) {
 // 5. Possible increased server load from custom image generation
 
 if ( ! function_exists( 'auxin_get_the_resized_attachment_src' ) ) {
-    function auxin_get_the_resized_attachment_src( $attach_id = null, $width = null, $height = null ) {
-        if ( null === $attach_id ) {
+    function auxin_get_the_resized_attachment_src( $attach_ids = null, $width = null, $height = null ) {
+        
+        if ( empty( $attach_ids ) ) {
             return false;
         }
 
+        $is_array = is_array( $attach_ids );
+        $attach_ids = (array) $attach_ids;
+
+        $srcs = [];
+        
+        foreach($attach_ids as $attach_id){
+
         if ( ! wp_attachment_is( 'image', $attach_id ) ) {
-            return false;
+            continue;
         }
 
         // Default size
@@ -39,6 +47,13 @@ if ( ! function_exists( 'auxin_get_the_resized_attachment_src' ) ) {
 
         // Get the image source
         $image_src = wp_get_attachment_image_src( $attach_id, $size );
-        return $image_src ? $image_src[0] : false;
+        $srcs[] =  $image_src ? $image_src[0] : false;
     }
+
+    if( $is_array ){
+        return $srcs;
+    }
+
+    return $srcs[0];
+}
 }

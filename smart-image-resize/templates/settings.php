@@ -24,12 +24,12 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
     
     
     <h2 class="nav-tab-wrapper">
-        <a href="?page=wp-smart-image-resize&tab=general"
-           class="nav-tab <?php echo $current_tab === 'general' ? 'nav-tab-active' : '' ?>">Settings</a>
-        <a href="?page=wp-smart-image-resize&tab=regenerate_thumbnails"
-           class="nav-tab <?php echo $current_tab === 'regenerate_thumbnails' ? 'nav-tab-active' : '' ?>">Regenerate
-            Thumbnails</a>
-        
+    <a href="?page=wp-smart-image-resize&tab=general"
+    class="nav-tab <?php echo $current_tab === 'general' ? 'nav-tab-active' : '' ?>">Settings</a>
+        <a href="?page=wp-smart-image-resize&tab=bulk-regenerate"
+           class="nav-tab <?php echo $current_tab === 'bulk-regenerate' ? 'nav-tab-active' : '' ?>">Bulk Regenerate Images</a>
+         
+           
         <a href="?page=<?php echo WP_SIR_NAME; ?>&tab=help" 
            class="nav-tab <?php echo $current_tab === 'help' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Help', 'wp-smart-image-resize'); ?>
@@ -44,7 +44,8 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
                     <?php
                     settings_fields( WP_SIR_NAME );
                     do_settings_sections( WP_SIR_NAME );
-                    submit_button();
+                    submit_button(null, 'primary', 'submit', true, array('style' => 'margin-right: 10px;'));
+                    submit_button('Save and Bulk Regenerate', 'secondary', 'submit_and_bulk_resize', true);
                     ?>
                 </form>
             </div>
@@ -58,7 +59,7 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
                         <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Watermarking:</strong> Protect your images from theft and establish brand presence</li>
                         <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>PNG to JPG:</strong> Automatically convert PNG images to optimized JPGs</li>
                         <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>WebP Support:</strong> Faster loading with next-gen formats</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Coming Soon:</strong> AVIF support & AI background removal integration</li>
+                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Coming Soon:</strong> Convert and Display AVIF images & AI background removal integration</li>
                         <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Priority Support:</strong> Get fast, dedicated assistance</li>
                         <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Future-Proof:</strong> All upcoming features included</li>
                     </ul>
@@ -67,7 +68,13 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
                            Upgrade to Pro Now!
                         </a>
                         <p style="font-size: 12px; color: #646970; margin: 10px 0 0;">14-Day Money Back Guarantee</p>
+                        <div class="wpsirTestimonialBox">
+                    <span>⭐️⭐️⭐️⭐️⭐️</span>
+                    <p>"I downloaded the free version and after 3 minutes I bought the PRO version. The plugin is EXCELLENT! For a year I didn't know what to do with WooCommerce photos, because we have 30,000 imported products with different photos."</p>
+                    <div><a href="https://wordpress.org/support/topic/excellent-8052" target="_blank">- @prokurent on WordPress.org</a></div>
+                </div>
                     </div>
+               
                 </div>
                 
             </div>
@@ -75,30 +82,47 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
         </div>
 
     <?php endif;
-    if ( $current_tab === 'regenerate_thumbnails' ):
+    if ( $current_tab === 'bulk-regenerate' ):
         ?>
-        <div class="wp-sir-regenerate-thumbnails" style="padding:10px">
-            <p style="margin-bottom:5px">Follow these steps to resize images already uploaded to match your settings.</p>
+        <div class="wp-sir-bulk-regenerate" >
+        <h2><span>Bulk Regenerate Images</span></h2>
+            <p style="margin-bottom:5px">Use these steps to update your existing images according to your settings.</p>
             <ol>
-                <?php if ( !wp_sir_regen_thumb_active() ): ?>
+                <?php 
+                
+                if(defined('RETHUMBIFY_VERSION')):?>
+                    
+                    <li>Go to <a href="<?php echo admin_url('tools.php?page=rethumbify') ?>">Tools → Rethumbify</a></li>
+                    <li>Click the <b>Start Regeneration</b> button to start regenerating images</li>
+                    <?php 
+                    elseif(in_array('regenerate-thumbnails/regenerate-thumbnails.php',
+                    apply_filters('active_plugins', get_option('active_plugins')))): ?>
+                    <li>
+                       Go to <a href="<?php echo admin_url() ?>tools.php?page=regenerate-thumbnails">Tools → Regenerate
+                            Thumbnails</a>    
+                    </li>
+                    <li>
+                        Click the <b>Regenerate Thumbnails for All Attachments</b> button to start regenerating images
+                    </li>
+                    <?php else: ?>
                     <li>Install <a
                                 href="<?php echo admin_url( 'plugin-install.php?s=Regenerate+Thumbnails&tab=search&type=term' ) ?>">Regenerate
-                            Thumbnails plugin</a>.
+                            Thumbnails</a> plugin. </li>
+                   
+                   <li>Go to <a href="<?php echo admin_url() ?>tools.php?page=regenerate-thumbnails">Tools → Regenerate
+                            Thumbnails</a>.   
+                    </li>
+                    <li>
+                        Click the <b>Regenerate Thumbnails for All Attachments</b> button to start regenerating images
                     </li>
                 <?php endif; ?>
-                <li>Navigate to
-                    <?php if ( wp_sir_regen_thumb_active() ): ?>
-                        <a href="<?php echo admin_url() ?>tools.php?page=regenerate-thumbnails">Tools → Regenerate
-                            Thumbnails</a>
-                    <?php else: ?>
-                        Tools > Regenerate Thumbnails.
-                    <?php endif; ?>
-                </li>
-                <li>Click the <b>Regenerate Thumbnails for All Attachments</b> button to start resizing</li>
             </ol>
-            <p>
-                <b>NOTE:</b> If you still see old images, clear all caches including your browser cache, caching plugin cache, and Cloudflare cache.
-            </p>
+            <div class="notice notice-info inline" style="margin-top: 10px; padding: 10px;">
+                <p>
+                    <span class="dashicons dashicons-info" style="color: #00a0d2; margin-right: 5px;"></span>
+                    If you still see old images, try clearing all caches including your browser cache, caching plugin cache, and Cloudflare cache. This ensures the newly resized images are displayed properly.
+                </p>
+            </div>
           
         </div>
     <?php endif; ?>
