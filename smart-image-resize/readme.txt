@@ -1,6 +1,6 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Tags: woocommerce, product image resize, uniform product images, smart image cropping, fix image crop, square product image, same image size, resize thumbnails, fit images to size, correct image dimensions, insert image watermark, product image optimization
+Tags: woocommerce, product image resize, square image, same image size, cut-off image, cropped image, fix image crop, square thumbnail, resize image, picture resize, uniform image, same size, category image size, image resize without cropping, image resize, resize thumbnails, aspect ratio image, unwanted image size, fit image, fit image size, fit image dimensions, insert watermark, image white space, image empty space
 Requires at least: 4.0
 Tested up to: 6.8
 License: GPLv3
@@ -62,7 +62,7 @@ For more details, [visit the documentation](https://sirplugin.com/guide.html?utm
 
 #### Explore Our Other plugins:
 [HurryTimer](https://wordpress.org/plugins/hurrytimer/) – A versatile countdown timer to create urgency and scarcity that drives clicks, increases sales, highlights upcoming events or deadlines.
-[ReThumbify](http://rethumbify.com/) – An upcoming tool to regenerate thumbnails with background processing, pause & resume, selective regeneration, onld/unused thumbnails cleanup, and more.
+[ReThumbify](http://rethumbify.com/) – Regenerate thumbnails with background processing, pause & resume, selective regeneration, onld/unused thumbnails cleanup, and more.
 
 == Installation ==
 
