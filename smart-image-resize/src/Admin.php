@@ -303,10 +303,6 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             ]);
 
             $watermark_section_title = 'Watermark';
-            
-             
-             $watermark_section_title.= ' <span class="wp-sir-pro-badge">PRO</span>';
-             
 
             add_settings_section('wp_sir_settings_watermark', $watermark_section_title, null, WP_SIR_NAME, [
             'before_section' => '<div class="sir-settings-section">',
@@ -401,17 +397,14 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             // Register `Image Compression` field.
             add_settings_field(
                 'wp_sir_settings_image_quality',
-                'Image Compression',
+                'Image Compression<span class="wp-sir-help-tip" title="Adjust image compression level. Higher values (e.g. 70-90%) apply more compression, resulting in smaller file sizes but lower image quality. Lower values (e.g. 40-60%) apply less compression, maintaining better image quality but producing larger files. Default: 0%"></span>',
                 [$this, 'settings_field_image_quality'],
                 WP_SIR_NAME,
                 'wp_sir_settings_optimization'
             );
 
             $png2jpg_title = 'PNG-JPG Conversion';
-            
-            $png2jpg_title .= ' <span class="wp-sir-pro-badge">PRO</span>';
-            
-
+           
             // Register `Convert to JPG format` field.
             add_settings_field(
                 'wp_sir_settings_jpg_convert',
@@ -422,9 +415,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             );
 
             $nextgen_format_title = 'Convert and Display WebP Images';
-            
-            $nextgen_format_title .= ' <span class="wp-sir-pro-badge">PRO</span>';
-            
+           
             // Register `Enable WebP format` field.
             add_settings_field(
                 'wp_sir_settings_enable_webp',
@@ -528,6 +519,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             <label for="wp-sir-enable-watermark" >
                 <input type="checkbox" name="wp_sir_settings[enable_watermark]"  <?php checked($settings['enable_watermark'], 1); ?> id="wp-sir-enable-watermark" class="wp-sir-as-toggle" value="1" />
             </label>
+            <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=watermark" target="_blank">Upgrade to PRO</a>
+
             <div  class="wp-sir-watermark-settings" style="display:<?php echo $settings['enable_watermark'] ? 'flex': 'none' ?>">
            <div style="padding-right: 20px;">
                
@@ -661,6 +654,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 
                 
             </label>
+            <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=png2jpg" target="_blank">Upgrade to PRO</a>
+
             <p class="description">
                 <?php _e(
                     "Unlock faster loading times and enhanced performance by converting PNG images to optimized JPGs.",
@@ -676,6 +671,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                                                                                                                                                             disabled
                                                                                                                                                                              value="1" />
                                                                                                                                                                                         </label>
+                <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=webp" target="_blank">Upgrade to PRO</a>
+
         <p class="description">
         WebP format significantly reduces image file size by up to 90% compared to PNG, maintaining high quality. 
         </p>                                                                                                                                                                           
@@ -715,9 +712,6 @@ We automatically serve the best format to ensure optimal performance.
                        data-value-display="wp-sir-jpg-quality-value" />
                 <span id="wp-sir-jpg-quality-value"><?php echo absint($settings['jpg_quality']); ?>%</span>
             </div>
-            <p class="description">
-                <?php _e('Adjust image compression level. Higher values (e.g. 70-90%) apply more compression, resulting in smaller file sizes but lower image quality. Lower values (e.g. 40-60%) apply less compression, maintaining better image quality but producing larger files. Default: 0%', 'wp-smart-image-resize'); ?>
-            </p>
 <?php
         }
 
