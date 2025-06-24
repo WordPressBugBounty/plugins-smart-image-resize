@@ -709,6 +709,53 @@ $('.wp-sir-tabs div').on('click', function(e) {
   }
 });
 
+// Handle Regenerate Thumbnails plugin installation
+$('#sir-install-rt').on('click', function(e) {
+    e.preventDefault();
+    var $button = $(this);
+    var $spinner = $('<span class="spinner is-active" style="float:none;margin-top:0;margin-left:5px"></span>');
+    
+    $button.prop('disabled', true).after($spinner);
+
+    $.ajax({
+        url: wp_sir_object.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'wp_sir_install_rt',
+            nonce: wp_sir_object.nonce
+        },
+        success: function(response) {
+            $spinner.remove();
+            if (response.success) {
+                var adminUrl = wp_sir_object.admin_url + 'tools.php?page=regenerate-thumbnails';
+                
+                // Update step 1 to completed state
+                var $step1 = $button.closest('.wp-sir-step');
+                $step1.addClass('completed').removeClass('active');
+                $step1.find('.wp-sir-step-content').html(`
+                    <h4>Install Regenerate Thumbnails</h4>
+                    <p><span class="dashicons dashicons-yes-alt"></span> Plugin installed successfully!</p>
+                `);
+                
+                // Activate step 2
+                var $step2 = $step1.next('.wp-sir-step');
+                $step2.addClass('active');
+                
+                // Add activated class to style all steps
+                $('.wp-sir-bulk-regenerate').addClass('rt-activated');
+            } else {
+                $button.prop('disabled', false);
+                $button.after('<span class="dashicons dashicons-warning" style="color:#d63638; vertical-align: middle; margin-left: 10px;"></span> ' + response.data.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            $spinner.remove();
+            $button.prop('disabled', false);
+            $button.after('<span class="dashicons dashicons-warning" style="color:#d63638; vertical-align: middle; margin-left: 10px;"></span> ' + error);
+        }
+    });
+});
+
 })(jQuery);
 
 

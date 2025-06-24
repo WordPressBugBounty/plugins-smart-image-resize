@@ -6,6 +6,9 @@ use ActionScheduler_Store;
 use WP_Smart_Image_Resize\Background_Process_On_Post_Save;
 use WP_Smart_Image_Resize\Quota;
 use WP_Smart_Image_Resize\Utilities\Env;
+use \Plugin_Upgrader;
+use \WP_Ajax_Upgrader_Skin;
+use \Imagick;
 
 /**
  * Class WP_Smart_Image_Resize\Settings
@@ -73,7 +76,30 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
             // Add AJAX handler for processor switch
             add_action('wp_ajax_wp_sir_switch_processor', [$this, 'ajax_switch_processor']);
+
+            // Add AJAX handler for Regenerate Thumbnails plugin installation
+            add_action('wp_ajax_wp_sir_install_rt', [$this, 'ajax_install_rt']);
+            
+            // Add nonce to wp_sir_object
+            // add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         }
+
+        
+        /**
+         * Enqueue admin scripts and localize data
+         */
+        // public function enqueue_admin_scripts() {
+        //     $screen = get_current_screen();
+        //     if (!$screen || strpos($screen->id, 'wp-smart-image-resize') === false) {
+        //         return;
+        //     }
+
+        //     wp_enqueue_script('wp-sir-admin');
+        //     wp_localize_script('wp-sir-admin', 'wp_sir_object2', array(
+        //         'nonce' => wp_create_nonce('sir_install_rt'),
+        //         'ajax_url' => admin_url('admin-ajax.php')
+        //     ));
+        // }
 
         public function plugin_settings_saved(){
             if (isset($_GET['page'])  && $_GET['page'] == WP_SIR_NAME && isset($_GET['settings-updated']) && $_GET['settings-updated']) {
@@ -316,7 +342,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
            
             add_settings_field(
                 'wp_sir_enable',
-                __('Enable', 'wp-smart-image-resize'),
+                __('Enable Resizing', 'wp-smart-image-resize'),
                 [$this, 'settings_field_enable'],
                 WP_SIR_NAME,
                 'wp_sir_settings_general'
@@ -414,7 +440,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'wp_sir_settings_optimization'
             );
 
-            $nextgen_format_title = 'Convert and Display WebP Images';
+            $nextgen_format_title = 'Convert and Display WebP Images<span class="wp-sir-help-tip" title="The plugin will automatically fallback to PNG/JPG if WebP is not supported by the browser."></span>';
            
             // Register `Enable WebP format` field.
             add_settings_field(
@@ -519,7 +545,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             <label for="wp-sir-enable-watermark" >
                 <input type="checkbox" name="wp_sir_settings[enable_watermark]"  <?php checked($settings['enable_watermark'], 1); ?> id="wp-sir-enable-watermark" class="wp-sir-as-toggle" value="1" />
             </label>
-            <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=watermark" target="_blank">Upgrade to PRO</a>
+            
+            <a href="https://sirplugin.com/#pricing?utm_source=wp&utm_medium=plugin&utm_campaign=watermark" target="_blank">Upgrade to PRO</a>
+            
 
             <div  class="wp-sir-watermark-settings" style="display:<?php echo $settings['enable_watermark'] ? 'flex': 'none' ?>">
            <div style="padding-right: 20px;">
@@ -654,7 +682,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 
                 
             </label>
-            <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=png2jpg" target="_blank">Upgrade to PRO</a>
+            
+            <a href="https://sirplugin.com/#pricing?utm_source=wp&utm_medium=plugin&utm_campaign=png2jpg" target="_blank">Upgrade to PRO</a>
+            
 
             <p class="description">
                 <?php _e(
@@ -671,10 +701,12 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                                                                                                                                                             disabled
                                                                                                                                                                              value="1" />
                                                                                                                                                                                         </label>
-                <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=webp" target="_blank">Upgrade to PRO</a>
+            
+            <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=webp" target="_blank">Upgrade to PRO</a>
+            
 
         <p class="description">
-        WebP format significantly reduces image file size by up to 90% compared to PNG, maintaining high quality. 
+        WebP format significantly reduces image file size by up to 90% compared to PNG, maintaining high quality.
         </p>                                                                                                                                                                           
                                                                                                                                                                                         <?php
         }
@@ -1163,9 +1195,7 @@ We automatically serve the best format to ensure optimal performance.
 
             // Add a flag to redirect after settings are saved
             add_filter('wp_redirect', function($location) {
-                if(defined('RETHUMBIFY_VERSION')){
-                    return admin_url('tools.php?page=rethumbify');
-                }elseif(in_array('regenerate-thumbnails/regenerate-thumbnails.php',
+                if(in_array('regenerate-thumbnails/regenerate-thumbnails.php',
                         apply_filters('active_plugins', get_option('active_plugins')))){
                     return admin_url('tools.php?page=regenerate-thumbnails');
                 }else{
@@ -1174,6 +1204,92 @@ We automatically serve the best format to ensure optimal performance.
                 
                 return $location;
             });
+        }
+
+        /**
+         * Handle AJAX request to install Regenerate Thumbnails plugin
+         */
+        public function ajax_install_rt() {
+            // Check nonce
+            check_ajax_referer('wp-sir-ajax', 'nonce');
+
+            // Check user capabilities
+            if (!current_user_can('install_plugins')) {
+                wp_send_json_error(array(
+                    'message' => __('You do not have permission to install plugins.', 'wp-smart-image-resize')
+                ));
+            }
+
+            $result = $this->install_regenerate_thumbnails();
+            
+            if (is_wp_error($result)) {
+                wp_send_json_error(array(
+                    'message' => $result->get_error_message()
+                ));
+            }
+            
+            wp_send_json_success(array(
+                'message' => __('Regenerate Thumbnails plugin installed and activated successfully!', 'wp-smart-image-resize'),
+                'plugin' => 'regenerate-thumbnails'
+            ));
+        }
+
+        /**
+         * Install Regenerate Thumbnails plugin
+         */
+        private function install_regenerate_thumbnails() {
+            if (!class_exists('Plugin_Upgrader')) {
+                require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+            }
+
+            $plugin_slug = 'regenerate-thumbnails';
+            $plugin_path = 'regenerate-thumbnails/regenerate-thumbnails.php';
+
+            // Check if plugin is already installed
+            if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
+                // Plugin is installed, just activate it
+                $activate = activate_plugin($plugin_path);
+                return is_wp_error($activate) ? $activate : true;
+            }
+
+            // Get plugin info from WordPress.org
+            if (!function_exists('plugins_api')) {
+                require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+            }
+
+            $api = plugins_api('plugin_information', array(
+                'slug' => $plugin_slug,
+                'fields' => array(
+                    'short_description' => false,
+                    'sections' => false,
+                    'requires' => false,
+                    'rating' => false,
+                    'ratings' => false,
+                    'downloaded' => false,
+                    'last_updated' => false,
+                    'added' => false,
+                    'tags' => false,
+                    'compatibility' => false,
+                    'homepage' => false,
+                    'donate_link' => false,
+                ),
+            ));
+
+            if (is_wp_error($api)) {
+                return $api;
+            }
+
+            // Install the plugin
+            $upgrader = new Plugin_Upgrader(new WP_Ajax_Upgrader_Skin());
+            $installed = $upgrader->install($api->download_link);
+
+            if (is_wp_error($installed)) {
+                return $installed;
+            }
+
+            // Activate the plugin
+            $activate = activate_plugin($plugin_path);
+            return is_wp_error($activate) ? $activate : true;
         }
     }
 endif;
