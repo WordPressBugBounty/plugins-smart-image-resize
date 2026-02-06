@@ -248,7 +248,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                         $thumb_object = clone $image;
                     }
                     $thumb_object = $thumb_object->filter(new Thumbnail_Filter($sizeName, $sizeData));
-                    
+
 
                     $thumb_path = $this->generateThumbPath($image->basePath(), $sizeData, $sizeName, $imageId);
 

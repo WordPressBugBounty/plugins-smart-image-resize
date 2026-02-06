@@ -668,6 +668,14 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                                                                                         true
                                                                                                     ) ? 'checked' : ''; ?> id="wp-sir-processable-images-product-cat"  value="product_cat" /> <span style="display:inline-block">Product category images</span>
                 </label>
+
+                 <label for="wp-sir-processable-images-product-brand" style="display: flex; align-items: center;margin-top: 10px">
+                    <input type="checkbox" name="wp_sir_settings[processable_images][taxonomies][]" <?php echo in_array(
+                                                                                                        'product_brand',
+                                                                                                        $settings['processable_images']['taxonomies'],
+                                                                                                        true
+                                                                                                    ) ? 'checked' : ''; ?> id="wp-sir-processable-images-product-cat"  value="product_brand" /> <span style="display:inline-block">Product brand images</span>
+                </label>
             </div>
             <p class="description">
                 <?php _e('Choose which image types should be resized.', 'wp-smart-image-resize'); ?>

@@ -125,7 +125,7 @@ final class Background_Process_On_Post_Save {
         if ($post->post_type === 'product' && function_exists('\wc_get_product')) {
             $product = \wc_get_product($post_id);
             
-            $variation_ids = $product->get_children();
+            $variation_ids = $product ? $product->get_children() : [];
             if(!empty($variation_ids) ){
                 foreach ($variation_ids as $variation_id) {
                     $image_ids[] = \get_post_thumbnail_id($variation_id);

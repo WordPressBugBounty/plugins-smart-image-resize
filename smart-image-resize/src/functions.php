@@ -372,17 +372,18 @@ if (!function_exists('wp_sir_is_processable')) {
          * `wp_sir_processable_tax_query_args` and provide two parameters (`$attachment_id` and `taxonomy`) to change meta name.
          *
          * @param int $attachment_id
+         * @param string|null $taxonomy Optional. Specific taxonomy to check. If provided, only checks this taxonomy.
          * @return bool
          *
          * @todo Other taxonomies will be added in the future including "pwb-brand" (Perfect WooCommerce Brands plugin).
          */
-        function wp_sir_is_term_image($attachment_id) {
-            if (!apply_filters('wp_sir_enable_category_image', true)) {
-                return false;
+        function wp_sir_is_term_image($attachment_id, $taxonomy = null) {
+            // If specific taxonomy is provided, check only that taxonomy
+            if (!empty($taxonomy)) {
+                $processable_taxonomies = [$taxonomy];
+            } else {
+                $processable_taxonomies = wp_sir_get_processable_taxonomies();
             }
-
-            $processable_taxonomies = wp_sir_get_processable_taxonomies();
-
             if (empty($processable_taxonomies)) {
                 return false;
             }
@@ -621,12 +622,14 @@ if (!function_exists('wp_sir_is_processable')) {
         return in_array($params['taxonomy'], $taxonomies, true);
     }
 
-    function wp_sir_is_term_image_upload() {
-        if (!apply_filters('wp_sir_enable_category_image', true)) {
-            return false;
-        }
+    function wp_sir_is_term_image_upload($taxonomy = null) {
 
-        $taxonomies = wp_sir_get_processable_taxonomies();
+        if( ! empty( $taxonomy ) ){
+            $taxonomies = [$taxonomy];
+        }
+        else{
+            $taxonomies = wp_sir_get_processable_taxonomies();
+        }
 
         if (empty($taxonomies)) {
             return false;
@@ -674,7 +677,6 @@ if (!function_exists('wp_sir_is_processable')) {
         }
     }
 }
-
 
 if (!function_exists('wp_sir_is_product_category_image_rest_upload')) {
 

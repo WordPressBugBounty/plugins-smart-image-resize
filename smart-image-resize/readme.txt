@@ -1,31 +1,30 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Tags: woocommerce, product images, image resize, image cropping, uniform images, auto resize, resize product images, smart image resize, webp, png to jpg, product image alignment, ecommerce images
+Tags: woocommerce, product images, same size, different sizes, thumbnails, uniform product images, consistent images, regenerate thumbnails, smart image resize, fix image size
 Requires at least: 4.0
-Tested up to: 6.8
+Tested up to: 6.9
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.13.0
+Stable tag: 1.15.0
 
-Automatically make WooCommerce product images the same size, aligned, and consistent — no manual editing needed.
+Automatically make WooCommerce product images the same size. Perfect for messy grids, works with existing photos, no cropping.
 
 == Description ==
 
-[Smart Image Resize](https://sirplugin.com/) automatically resizes and aligns your product images the moment they're uploaded — no manual cropping or editing required.
+[Smart Image Resize](https://sirplugin.com/) is the ultimate solution for **consistent and uniform product images** in your store.
 
-Whether you or your clients/vendors upload product photos, this plugin automatically ensures all WooCommerce product images share the same size and perfect alignment, creating a clean, professional, and consistent storefront.
+Stop losing sales because of an uneven, unprofessional-looking product grid. This plugin automatically resizes and adjusts product photos to ensure every image is the **same size, same aspect ratio, and perfectly centered**—all without losing parts of your product to bad cropping.
 
-No more uneven product grids, inconsistent image sizes, distracting whitespace, or important parts of your images getting cut off. Smart Image Resize handles it automatically as images are uploaded, saving you time and effort.
+It's the **#1** tool for **product photo consistency** and is essential for stores with large catalogs or mixed-size image sources.
 
-### 💡 Key Benefits
+### Key Benefits
 
-- Automatically resize product images to uniform size without cropping or cutting off important parts
-- Trim whitespace and center images for consistent presentation
-- Maintain consistent image size and alignment across your store
-- No manual editing or cropping required
-- Simplifies theme switching with standard image sizes
-- Processes images on upload and during imports.
+* **Uniform Sizing:** Automatically makes all product images the same size and aspect ratio, eliminating messy product grids.
+* **No More Cropping Headaches:** Preserves the entire product within the image frame, preventing important parts of your product from being cut off.
+* **Whitespace Trimming:** Removes unwanted white space around the product to keep it centered and prominent.
+* **Bulk Processing:** Resize and fix your entire existing catalog.
+* **Performance Ready:** Includes features to compress thumbnails and generate only necessary sizes, boosting site loading speed.
 
 ### Perfect for:
 
@@ -37,23 +36,38 @@ No more uneven product grids, inconsistent image sizes, distracting whitespace, 
 
 ### 🛠️ Free Features
 
-- ✅ Automatically resize up to 150 product images  
-- ✅ Remove unwanted white space to keep products centered and clean  
+- ✅ Automatically resize and process new product images on upload
+- ✅ Bulk resize up to 150 existing product images.
+- ✅ Remove unwanted white space to keep products centered and clean.
 - ✅ Add background color to match your brand  
 - ✅ Compress thumbnails to boost site loading speed  
-- ✅ Generate only necessary thumbnails and remove unused ones  
+- ✅ Generate only necessary thumbnails and remove unused ones to save disk space.
 - ✅ Select specific images to resize for more control
 
 ### 🔥 Pro Features
 
-- **♾ No limits** – resize unlimited product images.
--  **✈️ PNG to JPG auto conversion** – reduce size, keep quality.
-- **🚀 WebP image support** – load faster, retain transparency
-- **🔒Watermark protection** – keep your images safe and branded
-- **🛟 Priority support** - get fast help via chat or email
+- **♾ No limits** – Resize and optimize unlimited product images.
+-  **✈️ PNG to JPG auto conversion** – Reduce size, keep quality.
+- **🚀 WebP image support** – Serve next-gen WebP images for faster loading and better retention of image transparency.
+- **🔒Watermark protection** – Automatically add watermarks to your resized images.
+- **🛟 Priority support** - Get fast, dedicated support via chat or email.
 
-[Upgrade to Smart Image Resize PRO!](https://sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version)
+[Check out Smart Image Resize PRO!](https://sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version)
 
+
+= Here's What Our Users Are Saying =
+
+★★★★★
+> "I am so impressed with this plugin. I never bother writing plugin reviews but this plugin blew my mind. Definitely upgrade." - [@buttonmode](https://wordpress.org/support/topic/best-plugin-that-solved-all-my-image-issues/)
+
+★★★★★
+> "I downloaded the free version and after 3 minutes I bought the PRO version. The plugin is EXCELLENT! For a year I didn't know what to do with WooCommerce photos, because we have 30,000 imported products with different photos." - [@prokurent](https://wordpress.org/support/topic/excellent-8052/)
+
+★★★★★
+> "I recommended this to a dev friend the day after I used it, he used it as well. (We both ended up getting the Pro version to leave it on, customers don't care to crop their images on their own tbh)." - [@jpontinen](https://wordpress.org/support/topic/did-its-job-and-saved-a-ton-of-tedious-work/)
+
+★★★★★
+> "[••]The time saving benefits are enormous and the plugin support is A+. They have a chat that helps you solve any issues immediately." - [@chickwithbob](https://wordpress.org/support/topic/brilliant-lifesaver-with-incredible-support/)
 
 ### Usage
 
@@ -154,6 +168,15 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 4. Add custom background color of the new area.
 
 == Changelog ==
+
+= 1.15.0 =
+
+* Added support for product brands
+* Various improvements and bugfixes. 
+
+= 1.13.1 =
+
+* Declared compatibility with WooCommerce 10.3
 
 = 1.13.0 = 
 
