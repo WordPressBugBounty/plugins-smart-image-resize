@@ -571,7 +571,10 @@ if (!function_exists('wp_sir_is_processable')) {
             $post_type = false;
 
             if (isset($_REQUEST['post_id']) && !empty($_REQUEST['post_id'])) {
-                $post_type = get_post_type($_REQUEST['post_id']);
+                $post_id = absint($_REQUEST['post_id']);
+                if ($post_id > 0) {
+                    $post_type = get_post_type($post_id);
+                }
             }
 
             $is_editing_tax = \WP_Smart_Image_Resize\Utilities\Request::is_referer('taxonomy=');

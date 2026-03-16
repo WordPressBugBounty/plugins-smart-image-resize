@@ -67,7 +67,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             add_filter('admin_footer_text', [$this, 'admin_footer_text']);
 
             // Add Help tab
-            if (isset($_GET['page']) && $_GET['page'] === WP_SIR_NAME && isset($_GET['tab']) && $_GET['tab'] === 'help') {
+            $page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+            $tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : '';
+            if ($page === WP_SIR_NAME && $tab === 'help') {
                 add_action('admin_enqueue_scripts', function() {
                     wp_enqueue_style('wp-sir-admin');
                     wp_enqueue_script('wp-sir-admin');
@@ -102,7 +104,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         // }
 
         public function plugin_settings_saved(){
-            if (isset($_GET['page'])  && $_GET['page'] == WP_SIR_NAME && isset($_GET['settings-updated']) && $_GET['settings-updated']) {
+            $page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+            $settings_updated = isset($_GET['settings-updated']) ? sanitize_text_field($_GET['settings-updated']) : '';
+            if ($page === WP_SIR_NAME && $settings_updated) {
                 add_settings_error(WP_SIR_NAME, 'settings_updated', 'Settings saved successfully. To apply these changes to existing images, please regenerate thumbnails'
                 . (wp_sir_regen_thumb_active() ? ' by navigating to ' . sprintf('<a href="%s">Tools → Regenerate Thumbnails</a>.', admin_url('tools.php?page=regenerate-thumbnails')) : '.')
                 , 'updated');
@@ -110,8 +114,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         }
 
         public function show_settings_saved_notice(){
-
-            if(isset($_GET['page'])  && $_GET['page'] == WP_SIR_NAME){
+            $page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+            if($page === WP_SIR_NAME){
                 settings_errors(WP_SIR_NAME);
             }
 
@@ -149,7 +153,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
                 ?>
 <div class="notice notice-info is-dismissible">
-                    <p><b>Smart Image  Resize:</b> Processing recently uploaded images in the background. This may take a little while, so please be patient. <?php echo $pending_message; ?></p>
+                    <p><b>Smart Image  Resize:</b> Processing recently uploaded images in the background. This may take a little while, so please be patient. <?php echo wp_kses_post($pending_message); ?></p>
                 </div>
 <?php } 
         }
@@ -158,12 +162,13 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         function quota_exceeding_soon() {
             if (Quota::is_exceeding_soon()) { ?>
                 <div class="notice notice-warning is-dismissible">
-                    <p><?php _e(
+                    <p><?php esc_html_e(
                             'Smart Image Resize: Your are reaching your limit for re-sizing images.',
-                            WP_SIR_NAME
+                            'wp-smart-image-resize'
                         ); ?>
-                        <a target="_blank" href="https:/sirplugin.com/#pro?utm_source=plugin&utm_campaign=notice_limit" class="button button-default"><?php _e(
-                                                                                                                                                            'Upgrade to Pro'
+                        <a target="_blank" href="https:/sirplugin.com/#pro?utm_source=plugin&utm_campaign=notice_limit" class="button button-default"><?php esc_html_e(
+                                                                                                                                                            'Upgrade to Pro',
+                                                                                                                                                            'wp-smart-image-resize'
                                                                                                                                                         ); ?></a> for
                         unlimited images.
                     </p>
@@ -174,12 +179,13 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         function quota_exceeded_notice() {
             if (Quota::isExceeded()) { ?>
                 <div class="notice notice-error is-dismissible">
-                    <p><?php _e(
+                    <p><?php esc_html_e(
                             'Smart Image Resize: Your have reached your limit for re-sizing images.',
-                            WP_SIR_NAME
+                            'wp-smart-image-resize'
                         ); ?>
-                        <a target="_blank" href="https:/sirplugin.com/#pro?utm_source=plugin&utm_campaign=notice_limit" class="button button-default"><?php _e(
-                                                                                                                                                            'Upgrade to Pro'
+                        <a target="_blank" href="https:/sirplugin.com/#pro?utm_source=plugin&utm_campaign=notice_limit" class="button button-default"><?php esc_html_e(
+                                                                                                                                                            'Upgrade to Pro',
+                                                                                                                                                            'wp-smart-image-resize'
                                                                                                                                                         ); ?></a> for
                         unlimited images.
                     </p>
@@ -217,6 +223,11 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         }
 
         function pre_update_settings($newval) {
+            // Ensure we have an array
+            if (!is_array($newval)) {
+                $newval = [];
+            }
+
             $defaults = [
                 'enable'      => 0,
                 'jpg_convert' => 0,
@@ -224,49 +235,155 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 // 'enable_avif' => 0,
                 'enable_trim' => 0,
                 'enable_watermark' => 0,
+                'bg_color' => '#ffffff',
+                'jpg_quality' => 0,
+                'sizes' => [],
+                'trim_feather' => 0,
+                'trim_tolerance' => 3,
+                'watermark_size' => 50,
+                'watermark_image' => 0,
+                'watermark_position' => 'center',
+                'watermark_opacity' => 50,
+                'watermark_offset' => ['x' => 0, 'y' => 0],
+                'crop_mode' => 'pad',
+                'disable_upscale' => 0,
+                'processable_images' => ['post_types' => [], 'taxonomies' => []],
+                'size_options' => [],
             ];
 
-          
+            // Sanitize boolean/checkbox fields
+            $newval['enable'] = !empty($newval['enable']) ? 1 : 0;
+            $newval['jpg_convert'] = !empty($newval['jpg_convert']) ? 1 : 0;
+            $newval['enable_webp'] = !empty($newval['enable_webp']) ? 1 : 0;
+            $newval['enable_trim'] = !empty($newval['enable_trim']) ? 1 : 0;
+            $newval['enable_watermark'] = !empty($newval['enable_watermark']) ? 1 : 0;
+            $newval['disable_upscale'] = !empty($newval['disable_upscale']) ? 1 : 0;
 
-            if (isset($newval['processable_images']['taxonomies'])) {
-                $newval['processable_images']['taxonomies'] = (array)$newval['processable_images']['taxonomies'];
+            // Sanitize color field
+            if (isset($newval['bg_color'])) {
+                $newval['bg_color'] = sanitize_hex_color($newval['bg_color']);
+                if (empty($newval['bg_color'])) {
+                    $newval['bg_color'] = '';
+                }
+            }
+
+            // Sanitize numeric fields
+            if (isset($newval['jpg_quality'])) {
+                $newval['jpg_quality'] = absint($newval['jpg_quality']);
+                $newval['jpg_quality'] = min(100, max(0, $newval['jpg_quality']));
+            }
+
+            if (isset($newval['trim_feather'])) {
+                $newval['trim_feather'] = absint($newval['trim_feather']);
+                $newval['trim_feather'] = min(100, max(0, $newval['trim_feather']));
+            }
+
+            if (isset($newval['trim_tolerance'])) {
+                $newval['trim_tolerance'] = absint($newval['trim_tolerance']);
+                $newval['trim_tolerance'] = min(100, max(0, $newval['trim_tolerance']));
+            }
+
+            if (isset($newval['watermark_size'])) {
+                $newval['watermark_size'] = absint($newval['watermark_size']);
+                $newval['watermark_size'] = min(100, max(1, $newval['watermark_size']));
+            }
+
+            if (isset($newval['watermark_opacity'])) {
+                $newval['watermark_opacity'] = absint($newval['watermark_opacity']);
+                $newval['watermark_opacity'] = min(100, max(0, $newval['watermark_opacity']));
+            }
+
+            if (isset($newval['watermark_image'])) {
+                $newval['watermark_image'] = absint($newval['watermark_image']);
+            }
+
+            // Sanitize watermark position
+            if (isset($newval['watermark_position'])) {
+                $allowed_positions = ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'];
+                $newval['watermark_position'] = sanitize_text_field($newval['watermark_position']);
+                if (!in_array($newval['watermark_position'], $allowed_positions, true)) {
+                    $newval['watermark_position'] = 'center';
+                }
+            }
+
+            // Sanitize crop mode
+            if (isset($newval['crop_mode'])) {
+                $newval['crop_mode'] = sanitize_text_field($newval['crop_mode']);
+                if (!in_array($newval['crop_mode'], ['pad', 'fill'], true)) {
+                    $newval['crop_mode'] = 'pad';
+                }
+            }
+
+            // Sanitize watermark offset
+            if (!isset($newval['watermark_offset']) || !is_array($newval['watermark_offset'])) {
+                $newval['watermark_offset'] = [];
+            }
+            $newval['watermark_offset']['x'] = isset($newval['watermark_offset']['x']) ? absint($newval['watermark_offset']['x']) : 0;
+            $newval['watermark_offset']['y'] = isset($newval['watermark_offset']['y']) ? absint($newval['watermark_offset']['y']) : 0;
+
+            // Sanitize sizes array
+            if (isset($newval['sizes']) && is_array($newval['sizes'])) {
+                $newval['sizes'] = array_map('sanitize_text_field', $newval['sizes']);
+            } else {
+                $newval['sizes'] = [];
+            }
+
+            // Sanitize processable images
+            if (isset($newval['processable_images']['taxonomies']) && is_array($newval['processable_images']['taxonomies'])) {
+                $newval['processable_images']['taxonomies'] = array_map('sanitize_text_field', $newval['processable_images']['taxonomies']);
             } else {
                 $newval['processable_images']['taxonomies'] = [];
             }
             
-            if (isset($newval['processable_images']['post_types'])) {
-                $newval['processable_images']['post_types'] = (array)$newval['processable_images']['post_types'];
+            if (isset($newval['processable_images']['post_types']) && is_array($newval['processable_images']['post_types'])) {
+                $newval['processable_images']['post_types'] = array_map('sanitize_text_field', $newval['processable_images']['post_types']);
             } else {
                 $newval['processable_images']['post_types'] = [];
             }
 
-            // Ensure watermark offset values default to 0
-            if (!isset($newval['watermark_offset']) || !is_array($newval['watermark_offset'])) {
-                $newval['watermark_offset'] = [];
+            // Sanitize size_options
+            if (isset($newval['size_options']) && is_array($newval['size_options'])) {
+                $sanitized_size_options = [];
+                foreach ($newval['size_options'] as $size_name => $options) {
+                    $size_name = sanitize_text_field($size_name);
+                    if (is_array($options)) {
+                        $sanitized_size_options[$size_name] = [];
+                        if (isset($options['width'])) {
+                            $sanitized_size_options[$size_name]['width'] = absint($options['width']);
+                        }
+                        if (isset($options['height'])) {
+                            $sanitized_size_options[$size_name]['height'] = absint($options['height']);
+                        }
+                        if (isset($options['fit_mode'])) {
+                            $fit_mode = sanitize_text_field($options['fit_mode']);
+                            $sanitized_size_options[$size_name]['fit_mode'] = in_array($fit_mode, ['contain', 'none'], true) ? $fit_mode : 'contain';
+                        }
+                    }
+                }
+                $newval['size_options'] = $sanitized_size_options;
+            } else {
+                $newval['size_options'] = [];
             }
-            $newval['watermark_offset'] = wp_parse_args($newval['watermark_offset'], [
-                'x' => 0,
-                'y' => 0
-            ]);
 
             $settings = wp_parse_args($newval, $defaults);
-              
-              $settings['enable_watermark'] = 0;
-              $settings['jpg_convert'] = 0;
-              $settings['enable_webp'] = 0;
+            
+            
+            $settings['enable_watermark'] = 0;
+            $settings['jpg_convert'] = 0;
+            $settings['enable_webp'] = 0;
             //   $settings['enable_avif'] = 0;
-              
-              return $settings;
-
+            
+            
+            return $settings;
         }
 
 
         public function fileinfo_not_enabled() {
             if (!extension_loaded('fileinfo')) : ?>
                 <div class="notice notice-error  is-dismissible">
-                    <p><?php _e(
+                    <p><?php esc_html_e(
                             'Smart Image Resize: PHP Fileinfo extension is not enabled, contact your hosting provider to enable it.',
-                            WP_SIR_NAME
+                            'wp-smart-image-resize'
                         ); ?></p>
                 </div>
             <?php endif;
@@ -275,9 +392,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         public function phpversion_not_supported() {
             if (!version_compare(PHP_VERSION, '5.6.0', '>=')) : ?>
                 <div class="notice notice-error  is-dismissible">
-                    <p><?php _e(
+                    <p><?php esc_html_e(
                             'Smart Image Resize requires PHP 5.6.0 or greater to work correctly.',
-                            WP_SIR_NAME
+                            'wp-smart-image-resize'
                         ); ?></p>
                 </div>
             <?php endif;
@@ -316,7 +433,10 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
          */
         public function init_settings() {
 
-            register_setting(WP_SIR_NAME, 'wp_sir_settings');
+            register_setting(WP_SIR_NAME, 'wp_sir_settings', [
+                'sanitize_callback' => [$this, 'pre_update_settings'],
+                'default' => _wp_sir_get_default_settings(),
+            ]);
 
             add_settings_section('wp_sir_settings_general', 'Uniformity' , null, WP_SIR_NAME, [
                 'before_section' => '<div class="sir-settings-section sir-settings-general">',
@@ -351,7 +471,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             if(apply_filters('enable_experimental_features/crop_mode', false)){
                 add_settings_field(
                     'wp_sir_settings_cropping_mode',
-                    __('Cropping Mode<span class="wp-sir-help-tip" title="Choose how to crop or resize your images for a uniform look. (Experimental)"></span>', WP_SIR_NAME),
+                    __('Cropping Mode<span class="wp-sir-help-tip" title="Choose how to crop or resize your images for a uniform look. (Experimental)"></span>', 'wp-smart-image-resize'),
                     [$this, 'settings_field_cropping_mode'],
                     WP_SIR_NAME,
                     'wp_sir_settings_general',
@@ -394,7 +514,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
             add_settings_field(
                 'wp_sir_settings_sizes',
-                __('Image Sizes', WP_SIR_NAME),
+                __('Image Sizes', 'wp-smart-image-resize'),
                 [$this, 'settings_field_sizes'],
                 WP_SIR_NAME,
                 'wp_sir_settings_general',
@@ -466,16 +586,16 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                            value="1" />
                 </label>
                 <p class="description">
-                    <?php _e('Remove excess space from around images to create a clean, uniform appearance.', 'wp-smart-image-resize'); ?>
+                    <?php esc_html_e('Remove excess space from around images to create a clean, uniform appearance.', 'wp-smart-image-resize'); ?>
                 </p>
 
                 <!-- Advanced trim settings container -->
-                <div class="wp-sir-trim-advanced-settings" style="margin-top:15px;display:<?php echo $settings['enable_trim'] ? 'block' : 'none' ?>">
+                <div class="wp-sir-trim-advanced-settings" style="margin-top:15px;display:<?php echo $settings['enable_trim'] ? 'block' : 'none'; ?>">
                     <!-- Tolerance setting -->
                     <div class="wp-sir-setting-group">
                         <label>
                             <span class="wp-sir-setting-title">
-                                <?php _e('Color Tolerance', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Color Tolerance', 'wp-smart-image-resize'); ?>
                                 <span class="wp-sir-help-tip" title="<?php esc_attr_e('Higher values will trim colors that are similar but not exactly white. Use with caution as it may trim parts of your image.', 'wp-smart-image-resize'); ?>"></span>
                             </span>
                             <input type="range" 
@@ -489,7 +609,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                             <span id="wp-sir-tolerance-value"><?php echo esc_html($settings['trim_tolerance']); ?>%</span>
                         </label>
                         <p class="description wp-sir-tolerance-feedback">
-                            <?php _e('Default: 3%. Increase to trim more aggressively.', 'wp-smart-image-resize'); ?>
+                            <?php esc_html_e('Default: 3%. Increase to trim more aggressively.', 'wp-smart-image-resize'); ?>
                         </p>
                     </div>
 
@@ -497,7 +617,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                     <div class="wp-sir-setting-group" style="margin-top:15px">
                         <label>
                             <span class="wp-sir-setting-title">
-                                <?php _e('Preserve Border', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Preserve Border', 'wp-smart-image-resize'); ?>
                                 <span class="wp-sir-help-tip" title="<?php esc_attr_e('Add a small border around the trimmed image to prevent cutting too close to the edge.', 'wp-smart-image-resize'); ?>"></span>
                             </span>
                             <input type="number" 
@@ -508,7 +628,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                                    class="small-text" /> px
                         </label>
                         <p class="description">
-                            <?php _e('Set the width of the border to maintain around the image (in pixels).', 'wp-smart-image-resize'); ?>
+                            <?php esc_html_e('Set the width of the border to maintain around the image (in pixels).', 'wp-smart-image-resize'); ?>
                         </p>
                     </div>
                 </div>
@@ -529,7 +649,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                     } else if (value > 10) {
                         $feedback.html('Medium tolerance - will trim similar shades of white.');
                     } else {
-                        $feedback.html('<?php _e('Default: 3%. Increase to trim more aggressively.', 'wp-smart-image-resize'); ?>');
+                        $feedback.html('<?php esc_html_e('Default: 3%. Increase to trim more aggressively.', 'wp-smart-image-resize'); ?>');
                     }
                 });
 
@@ -549,17 +669,17 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             <a href="https://sirplugin.com/#pricing?utm_source=wp&utm_medium=plugin&utm_campaign=watermark" target="_blank">Upgrade to PRO</a>
             
 
-            <div  class="wp-sir-watermark-settings" style="display:<?php echo $settings['enable_watermark'] ? 'flex': 'none' ?>">
+            <div  class="wp-sir-watermark-settings" style="display:<?php echo $settings['enable_watermark'] ? 'flex' : 'none'; ?>">
            <div style="padding-right: 20px;">
                
            <div style="margin-top:10px">
                  Watermark <button type="button"  class="button button-small"  style="margin-top:-3px !important" id="wp-sir-open-media-uploader">Select/upload image</button> 
-                <input type="hidden" name="wp_sir_settings[watermark_image]" value="<?php echo $settings['watermark_image'] ?>"
+                <input type="hidden" name="wp_sir_settings[watermark_image]" value="<?php echo esc_attr($settings['watermark_image']); ?>"
                 <?php if(!empty($settings['watermark_image'])) :
                 $wm = wp_get_attachment_image_src($settings['watermark_image'], 'full');
                 $size= is_array($wm) ? json_encode(['w'=> $wm[1], 'h'=> $wm[2]]) : '';
                 ?>
-                    data-size='<?php echo $size ?>'
+                    data-size='<?php echo esc_attr($size); ?>'
                     <?php endif; ?>
                 >
                 </div>
@@ -570,8 +690,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 class="wp-sir-watermark-size wp-sir-range-input" type="range" 
                 min="1"
                 max="100"
-                value="<?php echo $settings['watermark_size']; ?>"  data-value-display="wp-sir-watermark-size-value" />
-                <span id="wp-sir-watermark-size-value"><?php echo $settings['watermark_size']; ?>%</span>
+                value="<?php echo esc_attr($settings['watermark_size']); ?>"  data-value-display="wp-sir-watermark-size-value" />
+                <span id="wp-sir-watermark-size-value"><?php echo esc_html($settings['watermark_size']); ?>%</span>
             </div>
         <p class="description">
             Adjust watermark size as a percentage of product image dimensions (1%–100%).
@@ -582,8 +702,8 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                     Opacity
             <div class="wp-sir-range-wrapper">
                 <input name="wp_sir_settings[watermark_opacity]" 
-                class="wp-sir-watermark-opacity wp-sir-range-input" type="range" value="<?php echo $settings['watermark_opacity']; ?>" data-value-display="wp-sir-watermark-opacity-value" />
-                <span id="wp-sir-watermark-opacity-value"><?php echo $settings['watermark_opacity']; ?>%</span>
+                class="wp-sir-watermark-opacity wp-sir-range-input" type="range" value="<?php echo esc_attr($settings['watermark_opacity']); ?>" data-value-display="wp-sir-watermark-opacity-value" />
+                <span id="wp-sir-watermark-opacity-value"><?php echo esc_html($settings['watermark_opacity']); ?>%</span>
             </div>
             <p class="description">
             Set the watermark transparency. 0% is fully transparent; 100% is fully visible.
@@ -607,14 +727,14 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             </div>
 
            <div class=""  style="margin-top:10px">
-           <label for="wp-sir-watermark-position">
+           <label for="wp-sir-watermark-offset-x">
             Offset X
-            <input type="number" min="0" id="wp-sir-watermark-offset-x" class="wp-sir-offset-input" name="wp_sir_settings[watermark_offset][x]" style="width:70px" value="<?php echo $settings['watermark_offset']['x'] ?>">
+            <input type="number" min="0" id="wp-sir-watermark-offset-x" class="wp-sir-offset-input" name="wp_sir_settings[watermark_offset][x]" style="width:70px" value="<?php echo esc_attr($settings['watermark_offset']['x']); ?>">
             </label>
 
-            <label for="wp-sir-watermark-position">
+            <label for="wp-sir-watermark-offset-y">
                 Offset Y
-            <input type="number" min="0" id="wp-sir-watermark-offset-y" class="wp-sir-offset-input" name="wp_sir_settings[watermark_offset][y]" style="width:70px" value="<?php echo $settings['watermark_offset']['y'] ?>">
+            <input type="number" min="0" id="wp-sir-watermark-offset-y" class="wp-sir-offset-input" name="wp_sir_settings[watermark_offset][y]" style="width:70px" value="<?php echo esc_attr($settings['watermark_offset']['y']); ?>">
 
             </label>
            </div>
@@ -625,7 +745,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
            <div>
               <div>
                  <span>Preview</span>
-              <div class="wp-sir-watermark-preview-container" style="border:1px solid #ddd; position:relative; background: url(<?php echo WP_SIR_URL . '/images/watermark-preview.jpg'; ?>); width:300px; height:300px;background-size:contain;background-repeat:no-repeat;background-color:white" >
+              <div class="wp-sir-watermark-preview-container" style="border:1px solid #ddd; position:relative; background: url(<?php echo esc_url(WP_SIR_URL . '/images/watermark-preview.jpg'); ?>); width:300px; height:300px;background-size:contain;background-repeat:no-repeat;background-color:white" >
                     
                     <?php if(!empty($settings['watermark_image'])) :
                    $watermark_fullpath = get_attached_file($settings['watermark_image']);
@@ -678,7 +798,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 </label>
             </div>
             <p class="description">
-                <?php _e('Choose which image types should be resized.', 'wp-smart-image-resize'); ?>
+                <?php esc_html_e('Choose which image types should be resized.', 'wp-smart-image-resize'); ?>
             </p>
         <?php
         }
@@ -695,9 +815,9 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             
 
             <p class="description">
-                <?php _e(
+                <?php esc_html_e(
                     "Unlock faster loading times and enhanced performance by converting PNG images to optimized JPGs.",
-                    WP_SIR_NAME
+                    'wp-smart-image-resize'
                 ); ?>
             </p>
         <?php
@@ -764,7 +884,7 @@ We automatically serve the best format to ensure optimal performance.
                 <input type="radio" 
                        id="wp-sir-crop-mode-scale"
                        value="pad" 
-                       <?php echo $settings['crop_mode'] === 'pad' ? 'checked':'' ?> 
+                       <?php echo $settings['crop_mode'] === 'pad' ? 'checked' : ''; ?> 
                        name="wp_sir_settings[crop_mode]">
                 Scale and Add whitespace
                 <span class="wp-sir-help-tip" title="Scales the image to fit the dimensions while preserving all content. If needed, adds white space to fill the remaining area. Best for when you want to keep the entire image visible."></span>
@@ -774,7 +894,7 @@ We automatically serve the best format to ensure optimal performance.
                 <input type="radio"
                        id="wp-sir-crop-mode-crop" 
                        value="fill"
-                       <?php echo $settings['crop_mode'] === 'fill' ? 'checked':'' ?> 
+                       <?php echo $settings['crop_mode'] === 'fill' ? 'checked' : ''; ?> 
                        name="wp_sir_settings[crop_mode]">
                 Fill and Crop
                 <span class="wp-sir-help-tip" title="Fills the entire dimensions by trimming edges of the image as needed. Some parts of the image will be cut off to ensure the image fits perfectly without any whitespace."></span>
@@ -791,8 +911,8 @@ We automatically serve the best format to ensure optimal performance.
         ?>
 
 <p class="description">
-                    <?php _e('Choose which image sizes WordPress should generate when uploading product images.', 'wp-smart-image-resize'); ?>
-                    <?php _e("For optimal disk space usage, we've pre-selected only the essential sizes.", 'wp-smart-image-resize'); ?>
+                    <?php esc_html_e('Choose which image sizes WordPress should generate when uploading product images.', 'wp-smart-image-resize'); ?>
+                    <?php esc_html_e("For optimal disk space usage, we've pre-selected only the essential sizes.", 'wp-smart-image-resize'); ?>
         </p>
             <div class="wp-sir-sizes-wrapper">
                 <div class="wp-sir-sizes-header">
@@ -816,7 +936,7 @@ We automatically serve the best format to ensure optimal performance.
                         </div>
                         <button id="wpsirResetDefaultSizes" type="button" class="wp-sir-reset-link <?php echo $selected_count === count($default_sizes) ? 'hidden' : '' ?>">
                             <span class="dashicons dashicons-image-rotate"></span>
-                            <?php _e('Reset to defaults', 'wp-smart-image-resize'); ?>
+                            <?php esc_html_e('Reset to defaults', 'wp-smart-image-resize'); ?>
                         </button>
                     </div>
                 </div>
@@ -828,11 +948,11 @@ We automatically serve the best format to ensure optimal performance.
                         <tr>
                             <th style="padding-left:5px;padding-top:10px !important; padding-bottom:10px !important;border-bottom:1px solid #ddd;margin-bottom:0 !important;">
                                 <input type="checkbox" id="wp-sir-toggle-all-sizes" <?php echo (count($additional_sizes)) === count($settings['sizes']) ? 'checked' : '' ?> /> 
-                                <?php _e('Select all', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Select all', 'wp-smart-image-resize'); ?>
                             </th>
                             <?php if($enable_fit_mode_option): ?>
                             <th style="padding-left:0;padding-top:10px !important; padding-bottom:10px !important;border-bottom:1px solid #ddd;margin-bottom:0 !important;text-align:center">
-                                <?php _e('Use WordPress Cropping', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Use WordPress Cropping', 'wp-smart-image-resize'); ?>
                                 <?php $tooltip = "Check this to apply the thumbnail cropping setting under Settings → Media"; 
                                 if(wp_sir_is_woocommerce_activated()){
                                     $tooltip .= " and Appearance → Customize → WooCommerce → Product Images.";
@@ -845,10 +965,10 @@ We automatically serve the best format to ensure optimal performance.
                             <?php endif; ?>
                             <?php if (wp_sir_is_woocommerce_activated()) : ?>
                                 <th style="padding-left:5px;padding-top:10px !important;padding-right:10px; padding-bottom:5px !important;border-bottom:1px solid #ddd;margin-bottom:0 !important; max-width:100px">
-                                    <?php _e('Width (px)', 'wp-smart-image-resize'); ?>
+                                    <?php esc_html_e('Width (px)', 'wp-smart-image-resize'); ?>
                                 </th>
                                 <th style="padding-left:0;padding-right:0;padding-top:10px !important; padding-bottom:10px !important;border-bottom:1px solid #ddd;margin-bottom:0 !important;max-width:100px">
-                                    <?php _e('Height (px)', 'wp-smart-image-resize'); ?>
+                                    <?php esc_html_e('Height (px)', 'wp-smart-image-resize'); ?>
                                 </th>
                             <?php endif; ?>
                         </tr>
@@ -868,9 +988,9 @@ We automatically serve the best format to ensure optimal performance.
                                 <td style="<?php echo wp_sir_is_woocommerce_activated() ? 'min-width:310px;' : '' ?>padding-left:5px;padding-top:10px !important; padding-bottom:10px !important;margin-bottom:0 !important; "><label title="" for="" style="display:flex;align-items:center;font-size:13px;">
                                         <label style="display: block;width:100%">
                                             <input
-                                            type="checkbox" class="wpSirSelectSize" value="<?php echo $size_name ?>" <?php echo in_array($size_name, $settings['sizes']) ? 'checked' : ''; ?> name="wp_sir_settings[sizes][]"
+                                            type="checkbox" class="wpSirSelectSize" value="<?php echo esc_attr($size_name); ?>" <?php echo in_array($size_name, $settings['sizes']) ? 'checked' : ''; ?> name="wp_sir_settings[sizes][]"
                                             >
-                                            <span><?php echo str_replace('_', ' ', ucfirst($size_name)) ?> (<?php echo $size_data['width'] . 'x' . $size_data['height'] ?>)</span>
+                                            <span><?php echo esc_html(str_replace('_', ' ', ucfirst($size_name))); ?> (<?php echo esc_html($size_data['width'] . 'x' . $size_data['height']); ?>)</span>
                                             <?php if ($size_name === 'woocommerce_thumbnail') : ?>
                                                 <span class="wp-sir-help-tip" title="Used in the product grids in places such as the shop page."></span>
                                             <?php endif; ?>
@@ -889,9 +1009,9 @@ We automatically serve the best format to ensure optimal performance.
                                  <?php if($enable_fit_mode_option): ?>
                                 <td style="text-align:center;padding-left:0;padding-right:0;padding-top:5px !important; padding-bottom:5px !important;margin-bottom:0 !important;">
                                     <label>
-                                        <input type="hidden" name="wp_sir_settings[size_options][<?php echo $size_name ?>][fit_mode]" value="contain">
-                                        <input type="checkbox" class="wp-sir-fit-mode" name="wp_sir_settings[size_options][<?php echo $size_name ?>][fit_mode]" value="none" 
-                                        <?php echo _wp_sir_exclude_size($size_name, $settings['size_options']) ? 'checked': '' ?>
+                                        <input type="hidden" name="wp_sir_settings[size_options][<?php echo esc_attr($size_name); ?>][fit_mode]" value="contain">
+                                        <input type="checkbox" class="wp-sir-fit-mode" name="wp_sir_settings[size_options][<?php echo esc_attr($size_name); ?>][fit_mode]" value="none" 
+                                        <?php echo _wp_sir_exclude_size($size_name, $settings['size_options']) ? 'checked' : ''; ?>
                                         >
                                     </label>
                                 </td>
@@ -899,10 +1019,10 @@ We automatically serve the best format to ensure optimal performance.
                                 <?php if (is_woocommerce_size($size_name)) : ?>
 
                                     <td class="wp-sir-custom-dimensions" style="padding-left:5px;padding-right:5px;padding-top:5px !important; padding-bottom:5px !important;margin-bottom:0 !important; max-width:100px">
-                                        <input type="number" value="<?php echo $size_data['width'] ?>" style="width:70px" name="wp_sir_settings[size_options][<?php echo $size_name ?>][width]">
+                                        <input type="number" value="<?php echo esc_attr($size_data['width']); ?>" style="width:70px" name="wp_sir_settings[size_options][<?php echo esc_attr($size_name); ?>][width]">
                                     </td>
                                     <td class="wp-sir-custom-dimensions" style="padding-left:0;padding-right:0;padding-top:5px !important; padding-bottom:5px !important;margin-bottom:0 !important; max-width:100px">
-                                        <input type="number" value="<?php echo $size_data['height'] ?>" style="width:70px" name="wp_sir_settings[size_options][<?php echo $size_name ?>][height]">
+                                        <input type="number" value="<?php echo esc_attr($size_data['height']); ?>" style="width:70px" name="wp_sir_settings[size_options][<?php echo esc_attr($size_name); ?>][height]">
                                     </td>
 
                                 <?php endif; ?>
@@ -922,7 +1042,7 @@ We automatically serve the best format to ensure optimal performance.
 
         public function settings_field_bg_color($args) {
             $settings = \wp_sir_get_settings(); ?>
-            <input name="wp_sir_settings[bg_color]" value="<?php echo $settings['bg_color']; ?>" type="text" id="wpSirColorPicker" />
+            <input name="wp_sir_settings[bg_color]" value="<?php echo esc_attr($settings['bg_color']); ?>" type="text" id="wpSirColorPicker" />
             <button type="button" class="button button-default button-small" id="wp-sir-clear-bg-color" style="min-height:30px">Clear</button>
             <p class="description">
                 NOTE: Default background is white. Click "Clear" to keep image transparency.</p>
@@ -957,7 +1077,7 @@ We automatically serve the best format to ensure optimal performance.
             // Add one help tab
             $screen->add_help_tab(array(
                 'id'      => 'wp-sir-help-tab1',
-                'title'   => esc_html__('Overview', WP_SIR_NAME),
+                'title'   => esc_html__('Overview', 'wp-smart-image-resize'),
                 'content' =>
                 '<p><strong>Images:</strong> Choose which images you want to process with the plugin.</p>' .
                     '<p><strong>Image Sizes:</strong> Pick the dimensions you want your images resized to.</p>' .
@@ -975,7 +1095,7 @@ We automatically serve the best format to ensure optimal performance.
             
             $screen->set_help_sidebar(
                 '<p><strong>' .
-                    esc_html__('For more information:', WP_SIR_NAME) .
+                    esc_html__('For more information:', 'wp-smart-image-resize') .
                     '</strong></p>' . $help_sidebar
             );
         }
@@ -991,7 +1111,7 @@ We automatically serve the best format to ensure optimal performance.
                        value="1" />
             </label>
             <p class="description">
-                <?php _e('When enabled, small photos will be kept at their original size rather than stretching them larger. Empty space will be added around the image instead. This keeps your photos looking crisp and clear.', 'wp-smart-image-resize'); ?>
+                <?php esc_html_e('When enabled, small photos will be kept at their original size rather than stretching them larger. Empty space will be added around the image instead. This keeps your photos looking crisp and clear.', 'wp-smart-image-resize'); ?>
             </p>
             <?php
         }
@@ -1012,6 +1132,11 @@ We automatically serve the best format to ensure optimal performance.
         }
 
         private function generate_system_report() {
+            // Only allow administrators to generate system reports
+            if (!current_user_can('manage_options')) {
+                return [];
+            }
+
             global $wp_version;
             
             $report = [];
@@ -1023,7 +1148,14 @@ We automatically serve the best format to ensure optimal performance.
             $report['Post Max Size'] = ini_get('post_max_size');
             $report['Upload Max Size'] = ini_get('upload_max_filesize');
             $report['Image Processing'] = $this->get_image_processor_info();
-            $report['Plugin Settings'] = get_option('wp_sir_settings');
+            
+            // Sanitize sensitive settings before including
+            $settings = get_option('wp_sir_settings');
+            if (is_array($settings)) {
+                // Remove potentially sensitive data
+                unset($settings['watermark_image']);
+                $report['Plugin Settings'] = $settings;
+            }
             
             return $report;
         }
@@ -1034,44 +1166,44 @@ We automatically serve the best format to ensure optimal performance.
             ?>
             <div class="wp-sir-help-page">
                 <div class="wp-sir-help-section">
-                    <h2><?php _e('Quick Links', 'wp-smart-image-resize'); ?></h2>
+                    <h2><?php esc_html_e('Quick Links', 'wp-smart-image-resize'); ?></h2>
                     <ul class="wp-sir-help-links">
                         <li>
                             <span class="dashicons dashicons-book"></span>
                             <a href="https://sirplugin.com/docs" target="_blank">
-                                <?php _e('Documentation', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Documentation', 'wp-smart-image-resize'); ?>
                             </a>
                         </li>
                         <li>
                             <span class="dashicons dashicons-sos"></span>
                             <a href="https://sirplugin.com/support" target="_blank">
-                                <?php _e('Contact Support', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Contact Support', 'wp-smart-image-resize'); ?>
                             </a>
                         </li>
                         <li>
                             <span class="dashicons dashicons-warning"></span>
                             <a href="https://sirplugin.com/troubleshooting" target="_blank">
-                                <?php _e('Troubleshooting Guide', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Troubleshooting Guide', 'wp-smart-image-resize'); ?>
                             </a>
                         </li>
                     </ul>
                 </div>
 
                 <div class="wp-sir-help-section">
-                    <h2><?php _e('System Information', 'wp-smart-image-resize'); ?></h2>
+                    <h2><?php esc_html_e('System Information', 'wp-smart-image-resize'); ?></h2>
                     <p class="description">
-                        <?php _e('Download this information when contacting support to help us assist you better.', 'wp-smart-image-resize'); ?>
+                        <?php esc_html_e('Download this information when contacting support to help us assist you better.', 'wp-smart-image-resize'); ?>
                     </p>
                     <p>
                         <button type="button" id="wp-sir-download-report" class="button button-secondary">
                             <span class="dashicons dashicons-download" style="margin-top: 4px;"></span>
-                            <?php _e('Download System Report', 'wp-smart-image-resize'); ?>
+                            <?php esc_html_e('Download System Report', 'wp-smart-image-resize'); ?>
                         </button>
                     </p>
                 </div>
 
                 <div class="wp-sir-help-section">
-                    <h2><?php _e('Image Processing', 'wp-smart-image-resize'); ?></h2>
+                    <h2><?php esc_html_e('Image Processing', 'wp-smart-image-resize'); ?></h2>
                     <?php if ($image_processors['gd']['available'] || $image_processors['imagick']['available']) : ?>
                         <div class="wp-sir-processor-switch">
                             <label>
@@ -1092,12 +1224,12 @@ We automatically serve the best format to ensure optimal performance.
                                 </select>
                             </label>
                             <p class="description">
-                                <?php _e('Select which image processing library to use. Change this only if you experience issues with image processing.', 'wp-smart-image-resize'); ?>
+                                <?php esc_html_e('Select which image processing library to use. Change this only if you experience issues with image processing.', 'wp-smart-image-resize'); ?>
                             </p>
                         </div>
                     <?php else: ?>
                         <div class="notice notice-error">
-                            <p><?php _e('No image processing library available. Please contact your hosting provider.', 'wp-smart-image-resize'); ?></p>
+                            <p><?php esc_html_e('No image processing library available. Please contact your hosting provider.', 'wp-smart-image-resize'); ?></p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1192,9 +1324,13 @@ We automatically serve the best format to ensure optimal performance.
          */
         public function handle_settings_form_submission() {
             // Check if we're saving our plugin's settings
-            if (!isset($_POST['option_page']) || $_POST['option_page'] !== WP_SIR_NAME) {
+            $option_page = isset($_POST['option_page']) ? sanitize_text_field($_POST['option_page']) : '';
+            if ($option_page !== WP_SIR_NAME) {
                 return;
             }
+
+            // WordPress settings API handles nonce verification via check_admin_referer()
+            // which is called before this hook in options.php
 
             // Check if bulk resize button was clicked
             if (!isset($_POST['submit_and_bulk_resize'])) {
@@ -1224,7 +1360,7 @@ We automatically serve the best format to ensure optimal performance.
             // Check user capabilities
             if (!current_user_can('install_plugins')) {
                 wp_send_json_error(array(
-                    'message' => __('You do not have permission to install plugins.', 'wp-smart-image-resize')
+                    'message' => esc_html__('You do not have permission to install plugins.', 'wp-smart-image-resize')
                 ));
             }
 
@@ -1237,7 +1373,7 @@ We automatically serve the best format to ensure optimal performance.
             }
             
             wp_send_json_success(array(
-                'message' => __('Regenerate Thumbnails plugin installed and activated successfully!', 'wp-smart-image-resize'),
+                'message' => esc_html__('Regenerate Thumbnails plugin installed and activated successfully!', 'wp-smart-image-resize'),
                 'plugin' => 'regenerate-thumbnails'
             ));
         }

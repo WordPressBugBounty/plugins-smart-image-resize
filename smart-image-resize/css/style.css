@@ -74,7 +74,6 @@ select+.ms-parent .ms-drop {
   font-size: 3rem;
   margin-bottom: 10px;
 }
-
 .wp-sir-notice-info {
   font-size: 13px;
   background-color: #ddd;
@@ -166,47 +165,79 @@ label[for="wp-sir-process-ml-upload"]+.description {
 .wpsirQuotaStatusProgressBar.isExceeded>span {
   background: #ff4444;
 }
-.wpsirInfoBox{
+.wpsirInfoBox {
   margin-bottom: 10px;
   background: #fff;
-  border: 1px solid #ccd0d4;
+  border: 1px solid #e2e4e9;
+  border-top: 3px solid #4f46e5;
+  border-radius: 6px;
+  overflow: hidden;
 }
-.sir-sidebar {
 
+.wpsirInfoBox-top {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.wpsirInfoBox-badge {
+  display: inline-block;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.wpsirInfoBox-top h3 {
+  margin: 0 0 6px;
+  color: #1a1a2e;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.wpsirInfoBox-top p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sir-sidebar {
   width: 270px;
   margin-left: 10px;
 }
 
-.wpsirInfoBox ul {
+.wpsirInfoBox-features {
   list-style: none;
-  padding: 8px 12px;
+  padding: 12px 18px;
+  margin: 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.wpsirInfoBox ul li {
-  display: block;
+.wpsirInfoBox-features li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: #374151;
 }
-.wpsirInfoBox h3{
-  margin-top: 0;
-  padding-bottom: 10px;
-  margin: 10px;
-  border-bottom: 1px solid #e5e5e5;
+
+.wpsirInfoBox-features li .dashicons {
+  color: #4f46e5;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
+
 .wpsirInfoBox a {
   text-decoration: none;
-}
-
-.wpsirInfoBox i {
-  text-decoration: none;
-}
-
-.wpsirInfoBox h3 {
-  font-size: 14px;
-}
-
-.wpsirInfoBox i,
-.wpsirInfoBox i:before {
-  font-size: 15px;
-  width: 15px;
 }
 
 .wpsirSettingsContainer {
@@ -230,9 +261,10 @@ label[for="wp-sir-process-ml-upload"]+.description {
     width: 100%;
   }
 
-  .wpsirInfoBox ul li {
-    display: inline;
+  .wpsirInfoBox-features li {
+    display: inline-flex;
     margin-right: 15px;
+  }
   }
 }
 
@@ -874,6 +906,7 @@ body[class*="_page_wp-smart-image-resize"] #tiptip_content,
 
 .sir-settings-general h2{
   display: flex;
+  align-items: end;
 }
 .sir-settings-general h2 span{
   margin-right: 10px;
@@ -926,4 +959,168 @@ body[class*="_page_wp-smart-image-resize"] #tiptip_content,
   margin-top: 10px;
   font-size: 14px;
   font-weight: normal;
+}
+
+/* Pro upgrade sidebar CTA */
+.wpsirInfoBox-testimonial {
+  margin: 0 18px;
+  padding: 12px 14px;
+  background: #fff8f3;
+  border-left: 3px solid #f97316;
+  border-radius: 0 4px 4px 0;
+}
+
+.wpsirInfoBox-stars {
+  color: #f97316;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.wpsirInfoBox-testimonial p {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  color: #374151;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.wpsirInfoBox-testimonial span {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.wpsirInfoBox-author {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.wpsirInfoBox-author::before {
+  content: attr(data-name);
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.wpsirInfoBox-author::after {
+  content: attr(data-title);
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.wpsirInfoBox-author-title {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.wpsirInfoBox-cta {
+  padding: 16px 18px;
+  text-align: center;
+}
+
+.wpsirInfoBox-btn {
+  display: block;
+  width: 100%;
+  padding: 11px 16px;
+  background: #4f46e5;
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none !important;
+  border-radius: 5px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.wpsirInfoBox-btn:hover {
+  background: linear-gradient(135deg, #ea6c0a 0%, #f97316 100%);
+  color: #fff !important;
+}
+
+.wpsirInfoBox-guarantee {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.wpsirInfoBox-guarantee .dashicons {
+  color: #f97316;
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+}
+
+/* HurryTimer ad box */
+.wpsirAdBox {
+  background: #fff;
+  border: 1px solid #e2e4e9;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.wpsirAdBox-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #9ca3af;
+  padding: 10px 14px 0;
+}
+
+.wpsirAdBox-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px 14px;
+}
+
+.wpsirAdBox-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+}
+
+.wpsirAdBox-icon img {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+.wpsirAdBox-content strong {
+  display: block;
+  font-size: 13px;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.wpsirAdBox-content p {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.wpsirAdBox-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5 !important;
+  text-decoration: none !important;
+}
+
+.wpsirAdBox-link:hover {
+  color: #4338ca !important;
 }

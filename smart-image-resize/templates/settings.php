@@ -55,21 +55,42 @@ $current_tab = isset( $_GET[ 'tab' ] ) ? $_GET[ 'tab' ] : 'general';
             <div class="wp-sir-sidebar">
                 
                 <div class="wpsirInfoBox">
-                    <h3>🚀 Get PRO and unlock:</h3>
-                    <ul>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>No Image Limits:</strong> Process unlimited images</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Watermarking:</strong> Protect your images from theft and establish brand presence</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>PNG to JPG:</strong> Automatically convert PNG images to optimized JPGs</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>WebP Support:</strong> Faster loading with next-gen formats</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Coming Soon:</strong> Convert and Display AVIF images & AI background removal integration</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Priority Support:</strong> Get fast, dedicated assistance</li>
-                        <li><i class="dashicons dashicons-yes" style="color: #2271b1;"></i> <strong>Future-Proof:</strong> All upcoming features included</li>
+                    <div class="wpsirInfoBox-top">
+                        <span class="wpsirInfoBox-badge"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></span>
+                        <h3><?php esc_html_e( 'Upgrade to Pro and take full control of your images.', 'wp-smart-image-resize' ); ?></h3>
+                        <p><?php esc_html_e( 'Remove image limits, protect your brand with watermarks, and serve faster next-gen formats — all on autopilot.', 'wp-smart-image-resize' ); ?></p>
+                    </div>
+                    <ul class="wpsirInfoBox-features">
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'Unlimited images — never hit a processing cap', 'wp-smart-image-resize' ); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'Watermarking — protect your images and build brand identity', 'wp-smart-image-resize' ); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'PNG → JPG — smaller files, faster store', 'wp-smart-image-resize' ); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'WebP support — boost Core Web Vitals scores', 'wp-smart-image-resize' ); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'Priority support — real help, fast', 'wp-smart-image-resize' ); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span><?php esc_html_e( 'All future features — one price, forever', 'wp-smart-image-resize' ); ?></li>
                     </ul>
-                    <div class="wp-sir-upgrade-cta">
-                        <a href="https://sirplugin.com?utm_source=wordpress&utm_medium=plugin&utm_campaign=sidebar" target="_blank" class="button button-primary">
-                           Upgrade to Pro Now!
+                    <div class="wpsirInfoBox-testimonial">
+                        <div class="wpsirInfoBox-stars">★★★★★</div>
+                        <p><?php esc_html_e( '"Smart Image Resize Pro is a must for Woocommerce shops, it makes it easy for our customers to upload new products themselves without having to spend a lot of time resizing. This is especially great when our customers import product catalogs from other vendors."', 'wp-smart-image-resize' ); ?></p>
+                        <span class="wpsirInfoBox-author" aria-hidden="true" data-name="— Benjamin Karlog" data-title="Founder / Slyde.dk"></span>
+                    </div>
+                    <div class="wpsirInfoBox-cta">
+                        <a href="https://sirplugin.com?utm_source=wordpress&utm_medium=plugin&utm_campaign=sidebar" target="_blank" class="wpsirInfoBox-btn">
+                            <?php esc_html_e( 'See Pro Plans', 'wp-smart-image-resize' ); ?>
                         </a>
-                        <p><span class="dashicons dashicons-shield"></span> 14-Day Money Back Guarantee</p>
+                    </div>
+                </div>
+
+                <div class="wpsirAdBox">
+                    <div class="wpsirAdBox-label"><?php esc_html_e( 'More plugins from us', 'wp-smart-image-resize' ); ?></div>
+                    <div class="wpsirAdBox-body">
+                        <div class="wpsirAdBox-icon"><img src="<?php echo esc_url( plugin_dir_url( dirname( __FILE__ ) ) . 'images/logo_hurryt.svg' ); ?>" alt="HurryTimer" width="32" height="32"></div>
+                        <div class="wpsirAdBox-content">
+                            <strong>HurryTimer Pro</strong>
+                            <p><?php esc_html_e( 'Run evergreen, recurring, and shipping cutoff countdown timers to drive more conversions across your store.', 'wp-smart-image-resize' ); ?></p>
+                            <a href="https://hurrytimer.com?utm_source=wp-smart-image-resize&utm_medium=plugin&utm_campaign=sidebar" target="_blank" class="wpsirAdBox-link">
+                                <?php esc_html_e( 'Learn more', 'wp-smart-image-resize' ); ?> →
+                            </a>
+                        </div>
                     </div>
                 </div>
                 

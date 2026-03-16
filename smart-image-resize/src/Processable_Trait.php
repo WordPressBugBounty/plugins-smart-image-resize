@@ -45,7 +45,8 @@ trait Processable_Trait
         }
         // Process any request with `_processable_image` parameter.
         // This can be used by developers to integrate with the plugin.
-        if ( isset( $_REQUEST[ '_processable_image' ] ) ) {
+        // Require upload_files capability for security
+        if ( isset( $_REQUEST[ '_processable_image' ] ) && current_user_can('upload_files') ) {
             return filter_var( $_REQUEST[ '_processable_image' ], FILTER_VALIDATE_BOOLEAN );
         }
 

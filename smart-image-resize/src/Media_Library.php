@@ -41,15 +41,21 @@ class Media_Library
       return $query;
     }
 
+    // Validate filter value
+    $filter = sanitize_text_field($post_query['_filter']);
+    if (!in_array($filter, ['processed', 'unprocessed'], true)) {
+      return $query;
+    }
+
     // Processed images.
-    if ($post_query['_filter'] === 'processed') {
+    if ($filter === 'processed') {
       $query['meta_query'] = array(
         array(
           'key' => '_processed_at',
           'compare' => 'EXISTS'
         )
       );
-    } elseif ($post_query['_filter'] === 'unprocessed') {
+    } elseif ($filter === 'unprocessed') {
       $filter_processable = new Filter_Processable_Regenerate_Thumbnails;
       $image_ids = $filter_processable->filter_processable_images();
 
@@ -140,7 +146,13 @@ class Media_Library
       return;
     }
 
-    switch ($_REQUEST['wp_sir_filter']) {
+    // Sanitize and validate filter value
+    $filter = sanitize_text_field($_REQUEST['wp_sir_filter']);
+    if (!in_array($filter, ['processed', 'unprocessed'], true)) {
+      return;
+    }
+
+    switch ($filter) {
       case 'processed':
         $query->set('meta_query', [
           [

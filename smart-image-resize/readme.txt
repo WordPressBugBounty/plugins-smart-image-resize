@@ -6,7 +6,7 @@ Tested up to: 6.9
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 5.6
-Stable tag: 1.15.0
+Stable tag: 1.15.1
 
 Automatically make WooCommerce product images the same size. Perfect for messy grids, works with existing photos, no cropping.
 
@@ -168,6 +168,11 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 4. Add custom background color of the new area.
 
 == Changelog ==
+
+= 1.15.1 =
+
+* Various improvements and bugfixes. 
+* Declared compatibility with WooCommerce v10.6 
 
 = 1.15.0 =
 

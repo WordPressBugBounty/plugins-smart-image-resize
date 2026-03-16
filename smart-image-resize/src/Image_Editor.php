@@ -291,17 +291,31 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 return $metadata;
             } catch (Exception $e) {
 
+                // Log full error details server-side for debugging
+                error_log(sprintf(
+                    'Smart Image Resize Error: %s (ID: %d, File: %s)',
+                    $e->getMessage(),
+                    $imageId,
+                    !empty($metadata['file']) ? $metadata['file'] : 'unknown'
+                ));
+
                 if (defined('WP_CLI') && WP_CLI) {
-                    $msg = "Smart Image Resize: " . $e->getMessage();
-
-                    if (!empty($metadata['file'])) {
-                        $msg .= " (Path: " . $metadata['file'] . ", ID: " . $imageId . ")";
+                    // For CLI, show more details but not full paths
+                    $msg = sprintf('Smart Image Resize: Image processing failed for ID: %d', $imageId);
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        $msg .= ' - ' . $e->getMessage();
                     }
-
                     \WP_CLI::warning($msg);
                 } else {
+                    // For web requests, show generic error message
+                    $error_msg = 'Smart Image Resize: Image processing failed.';
+                    if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
+                        $error_msg .= ' Error: ' . $e->getMessage();
+                    } else {
+                        $error_msg .= ' Please check error logs.';
+                    }
                     wp_send_json_error([
-                        'message' => "Smart Image Resize: " . $e->getMessage()
+                        'message' => $error_msg
                     ]);
                 }
 
@@ -344,7 +358,6 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
 
             $uploadsPath  = wp_get_upload_dir()['basedir'];
             $imageDirPath = trailingslashit($uploadsPath) . trailingslashit(dirname($oldMeta['file']));
-
 
             foreach ($oldFileNames as $file) {
 
