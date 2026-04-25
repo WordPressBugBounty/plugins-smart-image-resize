@@ -48,6 +48,9 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 
 			// Update the plugin version.
 			update_option( 'wp_sir_plugin_version', WP_SIR_VERSION );
+
+			// Create / upgrade bulk processor DB tables if needed.
+			Bulk_Processor::install();
 		}
 
 		/**
@@ -80,6 +83,13 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 				'ajax_url'                 => admin_url( 'admin-ajax.php' ),
 				'nonce'                    => wp_create_nonce( 'wp-sir-ajax' ),
 				'process_ml_upload_cookie' => Process_Media_Library_Upload::COOKIE_NAME,
+				'bulk' => [
+					'action_start'   => Bulk_Processor::AJAX_START,
+					'action_process' => Bulk_Processor::AJAX_PROCESS,
+					'action_pause'   => Bulk_Processor::AJAX_PAUSE,
+					'action_reset'   => Bulk_Processor::AJAX_RESET,
+					'action_status'  => Bulk_Processor::AJAX_STATUS,
+				],
 			] );
 		}
 
@@ -178,6 +188,7 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 			include_once WP_SIR_DIR . 'src/Admin.php';
 			include_once WP_SIR_DIR . 'src/Media_Library.php';
 			include_once WP_SIR_DIR . 'src/Background_Process_On_Post_Save.php';
+			include_once WP_SIR_DIR . 'src/Bulk_Processor.php';
 			include_once WP_SIR_DIR . 'src/plugin-support/index.php';
 			include_once WP_SIR_DIR . 'src/theme-support/index.php';
 			
@@ -185,11 +196,14 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 			include_once WP_SIR_DIR . 'src/class-plugin-review-request-notice.php';
 			
 
+			include_once WP_SIR_DIR . 'src/class-get-started-notice.php';
+
 			if ( extension_loaded( 'fileinfo' ) ) {
 				Image_Editor::get_instance()->run();
 			}
 
 			Admin::get_instance()->init();
+			Bulk_Processor::instance()->init();
 		}
 
 		/**

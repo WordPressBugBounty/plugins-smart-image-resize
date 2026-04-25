@@ -31,14 +31,22 @@ class Filter_Subscriber
             
         },10,2);
 
+        // Always load Base_Filter and the processable-images filter so that
+        // Bulk_Processor can instantiate Filter_Processable_Regenerate_Thumbnails
+        // regardless of whether the uniformity toggle is on or off.
+        require_once path_join(__DIR__, 'Base_Filter.php');
+        require_once path_join(__DIR__, 'Filter_Processable_Regenerate_Thumbnails.php');
+
         if (! wp_sir_get_settings()['enable']) {
             return;
         }
-        
-        require_once path_join(__DIR__, 'Base_Filter.php');
+
         foreach ($this->filters as $class) {
             $class_name = Helper::get_class_short_name($class);
-            require_once path_join(__DIR__, $class_name.'.php');
+            $file = path_join(__DIR__, $class_name.'.php');
+            if (is_readable($file)) {
+                require_once $file;
+            }
             if (class_exists($class)) {
                 ( new $class )->listen();
             }

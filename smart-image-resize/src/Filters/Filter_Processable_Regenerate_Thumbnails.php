@@ -128,6 +128,7 @@ class Filter_Processable_Regenerate_Thumbnails extends Base_Filter
   
     public function filter_processable_images()
     {
+        $image_ids = [];
         try {
        
             if ( !has_filter( 'wp_sir_is_attached_to' ) ) {

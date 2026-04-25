@@ -1,57 +1,55 @@
 === Smart Image Resize - Make WooCommerce Images the Same Size ===
 Contributors: nlemsieh
-Tags: woocommerce, product images, same size, different sizes, thumbnails, uniform product images, consistent images, regenerate thumbnails, smart image resize, fix image size
+Tags: image resize,uniform images,same size,woocommerce image resize,product image resize
 Requires at least: 4.0
 Tested up to: 6.9
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
-Requires PHP: 5.6
-Stable tag: 1.15.1
+Requires PHP: 7.0
+Stable tag: 1.16.0
 
-Automatically make WooCommerce product images the same size. Perfect for messy grids, works with existing photos, no cropping.
+Make WooCommerce product images the same size and uniform without cropping. No more manual image editing and photo resizing. No configuration required.
 
 == Description ==
 
-[Smart Image Resize](https://sirplugin.com/) is the ultimate solution for **consistent and uniform product images** in your store.
-
-Stop losing sales because of an uneven, unprofessional-looking product grid. This plugin automatically resizes and adjusts product photos to ensure every image is the **same size, same aspect ratio, and perfectly centered**—all without losing parts of your product to bad cropping.
-
-It's the **#1** tool for **product photo consistency** and is essential for stores with large catalogs or mixed-size image sources.
+[Smart Image Resize](https://sirplugin.com/) makes your store look professional with product images that are all uniform and the same size without cropping. No configuration required.
+ 
+It's the **#1** tool for **WooCommerce product image uniformity** and is essential for stores with large catalogs or mixed-size image sources.
 
 ### Key Benefits
 
-* **Uniform Sizing:** Automatically makes all product images the same size and aspect ratio, eliminating messy product grids.
-* **No More Cropping Headaches:** Preserves the entire product within the image frame, preventing important parts of your product from being cut off.
-* **Whitespace Trimming:** Removes unwanted white space around the product to keep it centered and prominent.
+* **Uniform Sizing:** Automatically makes all WooCommerce product images the same size and aspect ratio, eliminating messy, inconsistent product grids.
+* **No More Cropping Headaches:** Preserves the entire product within the image frame by adding a neutral background — no important parts of your product ever get cut off.
+* **Whitespace Trimming:** Trims unwanted white space around the product to keep it centered and prominent before resizing.
 * **Bulk Processing:** Resize and fix your entire existing catalog.
-* **Performance Ready:** Includes features to compress thumbnails and generate only necessary sizes, boosting site loading speed.
+* **Performance Ready:** Compress thumbnails and generate only necessary image sizes to boost your store's loading speed.
 
 ### Perfect for:
 
-- WooCommerce stores with mixed image sizes  
-- Dropshipping or supplier-imported images
-- Large catalogs (10,000+ products) needing automation
-- Multivendor marketplaces where sellers upload images in different sizes (Dokan, WCFM, etc.)
-- Stores migrating themes and needing standard-size images
-
+* WooCommerce stores with mixed product image sizes
+* Dropshipping or supplier-imported product images
+* Large catalogs (10,000+ products) needing automated image processing
+* Multivendor marketplaces where sellers upload images in different sizes (Dokan, WCFM, etc.)
+* Stores migrating themes and needing standard-size WooCommerce images
+ 
 ### 🛠️ Free Features
 
-- ✅ Automatically resize and process new product images on upload
-- ✅ Bulk resize up to 150 existing product images.
-- ✅ Remove unwanted white space to keep products centered and clean.
-- ✅ Add background color to match your brand  
-- ✅ Compress thumbnails to boost site loading speed  
-- ✅ Generate only necessary thumbnails and remove unused ones to save disk space.
-- ✅ Select specific images to resize for more control
-
+* ✅ Automatically resize and process new WooCommerce product images on upload
+* ✅ Bulk resize up to 150 existing product images
+* ✅ Trim unwanted whitespace to keep products centered and clean
+* ✅ Add a custom background color to match your brand
+* ✅ Compress thumbnails to boost site loading speed
+* ✅ Generate only necessary thumbnails and remove unused ones to save disk space
+* ✅ Select specific images to resize for more control
+ 
 ### 🔥 Pro Features
 
-- **♾ No limits** – Resize and optimize unlimited product images.
--  **✈️ PNG to JPG auto conversion** – Reduce size, keep quality.
-- **🚀 WebP image support** – Serve next-gen WebP images for faster loading and better retention of image transparency.
-- **🔒Watermark protection** – Automatically add watermarks to your resized images.
-- **🛟 Priority support** - Get fast, dedicated support via chat or email.
-
+* **♾ No limits** – Resize and optimize unlimited WooCommerce product images
+* **✈️ PNG to JPG auto conversion** – Reduce file size, keep quality
+* **🚀 WebP image support** – Serve next-gen WebP images for faster loading and better transparency support
+* **🔒 Watermark protection** – Automatically add watermarks to your resized images
+* **🛟 Priority support** – Get fast, dedicated support via chat or email
+ 
 [Check out Smart Image Resize PRO!](https://sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version)
 
 
@@ -71,16 +69,12 @@ It's the **#1** tool for **product photo consistency** and is essential for stor
 
 ### Usage
 
-Smart Image Resize automatically resizes new product images on upload. To resize already uploaded images, follow these steps:
+1. In your WordPress dashboard, go to **WooCommerce > Smart Image Resize > Bulk Regenerate**.
+2. Click the **Start Processing** button to begin resizing your existing images.
+Feel free to adjust the settings by going to **WooCommerce > Smart Image Resize > Settings**
+For more details, [see our documentation](https://docs.sirplugin.com?utm_source=wp&utm_medium=link&utm_campaign=lite_version).
 
-1. In your WordPress dashboard, go to **WooCommerce > Smart Image Resize > Bulk Regenerate Images**.
-2. Click "Install Regenerate Thumbnails" button.
-3. Go to **Tools > Regenerate Thumbnails**.
-4. Click "Regenerate Thumbnails For All Attachments" button.
-
-Feel free to adjust the settings by going to **WooCommerce > Smart Image Resize**
-
-For more details, [see our documentation](https://sirplugin.com/guide.html?utm_source=wp&utm_medium=link&utm_campaign=lite_version).
+**Note:** Newly uploaded product images are automatically resized — no extra steps needed.
 
 ## Explore Our Other plugins:
 [HurryTimer](https://wordpress.org/plugins/hurrytimer/) – A powerful countdown timer to create urgency and drive sales
@@ -97,67 +91,100 @@ For more details, [see our documentation](https://sirplugin.com/guide.html?utm_s
 
 = My product images are showing in different sizes, will the plugin make them uniform without cropping? =
 
-Indeed, addressing this issue is the primary purpose of our plugin.
+Yes, that's exactly what the plugin does. It makes all your product images the same size by adding a background color around them instead of cropping. Your products stay fully visible and your store looks professional.
 
 = Does the plugin automatically resize images on upload? =
 
-Yes. 
+Yes. Once activated, every new product image you upload is automatically resized to match your store's image sizes. No extra steps needed.
+
+= Do I need to configure anything before the plugin starts working? =
+
+No configuration needed. The plugin works immediately after activation with smart defaults. However, you can customize the background color, enable whitespace trimming, or choose which image sizes to process by going to **WooCommerce > Smart Image Resize > Settings**.
 
 = How do I resize already-uploaded product images? =
 
-To resize existing images, follow these steps:
+Go to **WooCommerce > Smart Image Resize > Bulk Regenerate** and click **Start Processing**. The tool will resize all your existing product images automatically.
 
-1. Install [Regenerate Thumbnails plugin](https://wordpress.org/plugins/regenerate-thumbnails).
-2. Navigate to **Tools > Regenerate Thumbnails**.
-3. Click on the **Regenerate Thumbnails For All Attachments** button.
+**Note:** If old images still appear after processing, clear your site's cache (caching plugin, CDN, and browser cache).
 
-**NOTE** If old images are still appearing, be sure to clear your cache.
+= My images look blurry or low quality after resizing. What should I do? =
 
-= Will this affect non-product images? = 
+There are two common causes:
 
-By default, the plugin only resizes product images. However, you have the option to enable resizing for category images in the plugin settings.
+1. **Compression is too high** — Go to **WooCommerce > Smart Image Resize > Settings**, open the **Optimization** section, and lower the compression level. A lower value means better quality.
+2. **The original image is too small** — When an image is smaller than the target size, the plugin stretches it to fit, which causes blurriness. You can turn on **Disable Upscaling** under **Settings > Advanced settings** to prevent stretching — the image will be left at its original size and padding will be added around it instead. Alternatively, upload a larger version of the image.
 
-= I need to change the default WooCommerce sizes, is it possible? =
+After making any changes, run the bulk regenerate tool to reprocess your images.
 
-Yes. To change the default WooCommerce sizes, navigate to WooCommerce → Smart Image Resize → Settings in your WordPress dashboard.
+= The plugin processed my images but they still look different on the frontend. Why? =
 
-= Is the plugin compatible with Dokan Multivendor? =
+This is almost always a caching issue. After processing, clear your site's cache (caching plugin, CDN, or browser cache) and reload the page. The updated images should appear correctly.
 
-Yes.
+= Images aren't being resized on upload. What could be wrong? =
+
+A few things to check:
+
+1. Make sure **Image Uniformity** is enabled in **Settings**.
+2. Make sure the PHP `fileinfo` extension is enabled — your hosting provider can confirm this.
+3. If images still aren't processing, try switching the image processor under **WooCommerce > Smart Image Resize > Help > Image Processing**. Switching between the available options can resolve compatibility issues on some servers.
+
+= What background color is used by default, and how do I change it? =
+
+White is the default background color. To change it, go to **WooCommerce > Smart Image Resize > Settings** and select a color under **Background Color**. Leave it empty to keep transparency for PNG images.
+
+= The bulk tool stopped partway through. What happened? =
+
+Your server ran out of memory while processing large images. Refresh the page and click **Start Processing** again — the tool automatically resumes where it stopped. If this keeps happening, contact your hosting provider to increase the server's memory limit.
 
 = Can I undo changes? =
 
-Absolutely yes! to revert changes, deactivate the plugin and run the Regenerate Thumbnails tool.
+Yes. Turn off **Image Uniformity** in **Settings**, then go to **WooCommerce > Smart Image Resize > Bulk Regenerate** and run the tool. This regenerates all thumbnails using the original WordPress sizing.
 
-= How can I know which images have been resized? =
+= Which image sizes does the plugin process? =
 
-To view resized images, apply the filter "Smart Resize: Processed" in your Media Library.
+By default, the plugin processes all standard WooCommerce image sizes (thumbnail, medium, woocommerce_thumbnail, woocommerce_single, etc.). You can customize which sizes to include or exclude under **Settings > Advanced settings > Image Sizes**.
 
-= Is the plugin compatible with WooCommerce HPOS? =
+= I need to change the default WooCommerce sizes, is it possible? =
 
-Yes, the plugin is fully compatible with WooCommerce HPOS (High-Performance Order Storage).
+Yes. Go to **WooCommerce > Smart Image Resize > Settings** to customize the default WooCommerce image dimensions.
 
-= Is the plugin compatible with WP CLI? =
+= Will this affect non-product images? = 
 
-Yes. You can use the command `wp media regenerate` to resize your existing images.
+No. By default, the plugin only processes product images. You can enable category images in the plugin settings if needed.
 
 = Can I use the plugin to resize non-product images as well? =
 
-Yes, you can use the plugin to resize non-product images as well. [Here's how.](https://docs.sirplugin.com/faqs/general-questions#can-i-use-the-plugin-to-resize-non-product-images-and-how)
+Yes. [Here's how to enable resizing for other image types.](https://docs.sirplugin.com/faqs/general-questions#can-i-use-the-plugin-to-resize-non-product-images-and-how)
+
+= How can I know which images have been resized? =
+
+In your Media Library, use the filter dropdown and select **"Smart Resize: Processed"** to view only images that have been resized by the plugin.
 
 = I get an error when I upload an image =
 
-If you encounter an error when uploading an image, ensure that the PHP `fileinfo` extension is enabled on your server.
+Make sure the PHP `fileinfo` extension is enabled on your server. Contact your hosting provider if you need help enabling it.
+
+= Is the plugin compatible with Dokan Multivendor? =
+
+Yes. Vendors can upload product images and the plugin will automatically resize them.
+
+= Is the plugin compatible with WooCommerce HPOS? =
+
+Yes. The plugin is fully compatible with WooCommerce High-Performance Order Storage (HPOS).
+
+= Is the plugin compatible with WP CLI? =
+
+Yes. Use the command `wp media regenerate` to bulk resize your existing images via command line.
 
 = Still have questions? =
 
-If you can't find the answer to your question, we may have posted it in [our FAQ](https://docs.sirplugin.com/faqs)
+Check our [complete FAQ documentation](https://docs.sirplugin.com/faqs) for more answers.
 
 = How do I get support? =
 
-If you have trouble with the plugin, [create a ticket](https://wordpress.org/support/plugin/smart-image-resize/) on the support forum and we'll make sure to look into it. 
+**Free version:** [Create a support ticket](https://wordpress.org/support/plugin/smart-image-resize/) on the WordPress.org forum.
 
-If you are a pro user, [contact the support](https://sirplugin.com/contact.html) on the official plugin site.
+**Pro version:** [Contact our priority support team](https://sirplugin.com/contact.html) for faster assistance.
 
 
 == Screenshots ==
@@ -168,6 +195,11 @@ If you are a pro user, [contact the support](https://sirplugin.com/contact.html)
 4. Add custom background color of the new area.
 
 == Changelog ==
+
+= 1.16.0 =
+
+* New: Built-in bulk regenerate tool.
+* Improved: Refreshed admin UI for a better experience.
 
 = 1.15.1 =
 

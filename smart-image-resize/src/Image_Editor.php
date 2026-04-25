@@ -300,23 +300,11 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 ));
 
                 if (defined('WP_CLI') && WP_CLI) {
-                    // For CLI, show more details but not full paths
                     $msg = sprintf('Smart Image Resize: Image processing failed for ID: %d', $imageId);
                     if (defined('WP_DEBUG') && WP_DEBUG) {
                         $msg .= ' - ' . $e->getMessage();
                     }
                     \WP_CLI::warning($msg);
-                } else {
-                    // For web requests, show generic error message
-                    $error_msg = 'Smart Image Resize: Image processing failed.';
-                    if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
-                        $error_msg .= ' Error: ' . $e->getMessage();
-                    } else {
-                        $error_msg .= ' Please check error logs.';
-                    }
-                    wp_send_json_error([
-                        'message' => $error_msg
-                    ]);
                 }
 
                 return $metadata;

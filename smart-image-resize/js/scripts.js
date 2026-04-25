@@ -522,9 +522,25 @@ var WP_SIR_UTIL = {
         $('#' + $(this).data('value-display')).text($(this).val() + '%');
     });
 
+    // Trim toggle — show/hide advanced sub-fields
     $('#wp-sir-enable-trim').on('change', function() {
       $('.wp-sir-trim-advanced-settings').toggle($(this).prop('checked'));
-  });
+    });
+
+    // Tolerance slider — live feedback message
+    $('#wp-sir-trim-tolerance').on('input', function() {
+      var value    = parseInt( $(this).val(), 10 );
+      var $feedback = $('.wp-sir-tolerance-feedback');
+      if ( value > 50 ) {
+        $feedback.html('<span class="wp-sir-feedback--danger">Warning: High tolerance may trim parts of your image that you want to keep.</span>');
+      } else if ( value > 20 ) {
+        $feedback.html('<span class="wp-sir-feedback--warning">Caution: Moderate-high tolerance — test on sample images first.</span>');
+      } else if ( value > 10 ) {
+        $feedback.text('Medium tolerance — will trim similar shades of white.');
+      } else {
+        $feedback.text('Default: 3%. Increase to trim more aggressively.');
+      }
+    }).trigger('input');
     
     $('.wp-sir-watermark-size').trigger('input');
     
@@ -572,118 +588,30 @@ function createCurveControl() {
   ];
 
   let html = '<div class="wp-sir-curve-control">';
-  positions.forEach((row, i) => {
+  positions.forEach((row) => {
     html += '<div class="wp-sir-curve-row">';
     row.forEach((pos) => {
-      html += `<button type="button" class="wp-sir-curve-point" data-position="${pos}">
-                <span class="screen-reader-text">${pos}</span>
-              </button>`;
+      const label = pos.replace(/-/g, ' ');
+      html += `<button type="button" class="wp-sir-curve-point" data-position="${pos}" title="${label}"><span class="screen-reader-text">${label}</span></button>`;
     });
     html += '</div>';
   });
   html += '</div>';
 
-  // Insert after position dropdown
   $('#wp-sir-watermark-position').after(html);
 
-  // Style for the curve control
-  const style = `
-    <style>
-      .wp-sir-curve-control {
-        display: inline-block;
-        margin: 10px 0;
-        padding: 10px;
-        border: 1px solid #ddd;
-        background: #fff;
-      }
-      .wp-sir-curve-row {
-        display: flex;
-        gap: 5px;
-        margin-bottom: 5px;
-      }
-      .wp-sir-curve-row:last-child {
-        margin-bottom: 0;
-      }
-      .wp-sir-curve-point {
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        border: 1px solid #ddd;
-        background: #f7f7f7;
-        cursor: pointer;
-        border-radius: 3px;
-      }
-      .wp-sir-curve-point:hover {
-        background: #e9e9e9;
-        border-color: #999;
-      }
-      .wp-sir-curve-point.active {
-        background: #2271b1;
-        border-color: #2271b1;
-      }
-      .screen-reader-text {
-        position: absolute;
-        margin: -1px;
-        padding: 0;
-        height: 1px;
-        width: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        border: 0;
-        word-wrap: normal !important;
-      }
-    </style>
-  `;
-  $('head').append(style);
-
-  // Handle curve point clicks
-  $('.wp-sir-curve-point').on('click', function() {
-    const position = $(this).data('position');
-    
-    // Update active state
+  // Handle clicks
+  $(document).on('click', '.wp-sir-curve-point', function() {
     $('.wp-sir-curve-point').removeClass('active');
     $(this).addClass('active');
-    
-    // Set position dropdown
-    let dropdownValue;
-    switch(position) {
-      case 'top-left':
-        dropdownValue = 'top-left';
-        break;
-      case 'top':
-        dropdownValue = 'top';
-        break;
-      case 'top-right':
-        dropdownValue = 'top-right';
-        break;
-      case 'left':
-        dropdownValue = 'left';
-        break;
-      case 'center':
-        dropdownValue = 'center';
-        break;
-      case 'right':
-        dropdownValue = 'right';
-        break;
-      case 'bottom-left':
-        dropdownValue = 'bottom-left';
-        break;
-      case 'bottom':
-        dropdownValue = 'bottom';
-        break;
-      case 'bottom-right':
-        dropdownValue = 'bottom-right';
-        break;
-    }
-    
-    $('#wp-sir-watermark-position').val(dropdownValue).trigger('change');
+    $('#wp-sir-watermark-position').val($(this).data('position')).trigger('change');
   });
 
-  // Set initial active point based on dropdown
+  // Sync grid with dropdown
   function updateCurveFromDropdown() {
-    const currentPosition = $('#wp-sir-watermark-position').val();
+    const current = $('#wp-sir-watermark-position').val();
     $('.wp-sir-curve-point').removeClass('active');
-    $(`.wp-sir-curve-point[data-position="${currentPosition}"]`).addClass('active');
+    $(`.wp-sir-curve-point[data-position="${current}"]`).addClass('active');
   }
 
   updateCurveFromDropdown();
@@ -700,7 +628,6 @@ $('.wp-sir-tabs div').on('click', function(e) {
   $('.wp-sir-tabs div').removeClass('active');
   $(this).addClass('active');
   if($(this).data('tab') === 'general'){
-    console.log('general');
     $('.sir-settings-general >table>tbody>tr:not(.wp-sir-is-advanced)').removeClass('hidden');
     $('.sir-settings-general >table>tbody>tr.wp-sir-is-advanced').addClass('hidden');
   }else{
@@ -709,52 +636,322 @@ $('.wp-sir-tabs div').on('click', function(e) {
   }
 });
 
-// Handle Regenerate Thumbnails plugin installation
-$('#sir-install-rt').on('click', function(e) {
-    e.preventDefault();
-    var $button = $(this);
-    var $spinner = $('<span class="spinner is-active" style="float:none;margin-top:0;margin-left:5px"></span>');
-    
-    $button.prop('disabled', true).after($spinner);
+// ── Redesigned settings page interactions ────────────────────────────────────
+(function ($) {
+  'use strict';
 
-    $.ajax({
-        url: wp_sir_object.ajax_url,
-        type: 'POST',
-        data: {
-            action: 'wp_sir_install_rt',
-            nonce: wp_sir_object.nonce
-        },
-        success: function(response) {
-            $spinner.remove();
-            if (response.success) {
-                var adminUrl = wp_sir_object.admin_url + 'tools.php?page=regenerate-thumbnails';
-                
-                // Update step 1 to completed state
-                var $step1 = $button.closest('.wp-sir-step');
-                $step1.addClass('completed').removeClass('active');
-                $step1.find('.wp-sir-step-content').html(`
-                    <h4>Install Regenerate Thumbnails</h4>
-                    <p><span class="dashicons dashicons-yes-alt"></span> Plugin installed successfully!</p>
-                `);
-                
-                // Activate step 2
-                var $step2 = $step1.next('.wp-sir-step');
-                $step2.addClass('active');
-                
-                // Add activated class to style all steps
-                $('.wp-sir-bulk-regenerate').addClass('rt-activated');
-            } else {
-                $button.prop('disabled', false);
-                $button.after('<span class="dashicons dashicons-warning" style="color:#d63638; vertical-align: middle; margin-left: 10px;"></span> ' + response.data.message);
-            }
-        },
-        error: function(xhr, status, error) {
-            $spinner.remove();
-            $button.prop('disabled', false);
-            $button.after('<span class="dashicons dashicons-warning" style="color:#d63638; vertical-align: middle; margin-left: 10px;"></span> ' + error);
-        }
+  $(document).ready(function () {
+
+    // Advanced settings toggle
+    $('#wp-sir-toggle-advanced').on('click', function () {
+      var $btn    = $(this);
+      var $panel  = $('#wp-sir-advanced-fields');
+      var expanded = $btn.attr('aria-expanded') === 'true';
+
+      $panel.slideToggle(200);
+      $btn.attr('aria-expanded', !expanded);
     });
-});
+
+    // Add-on card expand / collapse via header click
+    // The toggle checkbox itself is handled separately to avoid double-firing.
+    $(document).on('click', '.wp-sir-addon-card__header', function (e) {
+      // Don't collapse when clicking the toggle checkbox or the PRO pill link.
+      if ($(e.target).is('input[type="checkbox"], a, .wp-sir-toggle-label, .wp-sir-toggle-label *')) {
+        return;
+      }
+
+      var $header = $(this);
+      var targetId = $header.attr('aria-controls');
+      var $body    = $('#' + targetId);
+      var expanded = $header.attr('aria-expanded') === 'true';
+
+      $body.slideToggle(200);
+      $header.attr('aria-expanded', !expanded);
+    });
+
+    // Keyboard accessibility for add-on card headers
+    $(document).on('keydown', '.wp-sir-addon-card__header', function (e) {
+      if (e.which === 13 || e.which === 32) {
+        e.preventDefault();
+        $(this).trigger('click');
+      }
+    });
+
+    // When an add-on toggle is switched ON, also expand the body.
+    $(document).on('change', '.wp-sir-addon-toggle', function () {
+      var $checkbox = $(this);
+      var targetId  = $checkbox.data('target');
+      var $body     = $('#' + targetId);
+      var $header   = $body.closest('.wp-sir-addon-card').find('.wp-sir-addon-card__header');
+
+      if ($checkbox.is(':checked')) {
+        $body.slideDown(200);
+        $header.attr('aria-expanded', 'true');
+      } else {
+        $body.slideUp(200);
+        $header.attr('aria-expanded', 'false');
+      }
+    });
+
+  });
+})(jQuery);
+
+// Handle Regenerate Thumbnails plugin installation — removed (built-in bulk processor replaces RT)
+
+// ─── Built-in Bulk Image Processor ───────────────────────────────────────────
+(function ($) {
+  'use strict';
+
+  // Only run when the bulk-regenerate tab is present.
+  if (typeof wp_sir_object === 'undefined' || !wp_sir_object.bulk) {
+    return;
+  }
+
+  var bulk    = wp_sir_object.bulk;
+  var ajaxUrl = wp_sir_object.ajax_url;
+  var nonce   = wp_sir_object.nonce;
+
+  // All errors accumulated across the entire session (survives ticks).
+  var _allErrors = [];
+  var _aborted   = false;
+
+  // DOM refs — resolved once the page is ready.
+  var $wrap, $stateIdle, $stateActive, $stateDone;
+  var $btnStart, $btnPause, $btnResume, $btnRestart, $btnAbort;
+  var $statusLabel, $doneCount, $totalCount;
+  var $progressBar, $progressBarWrap, $percentLabel;
+  var $doneSummary;
+  var $errorLog, $errorLogToggle, $errorLogTitle, $errorLogBody, $errorTableBody;
+
+  function init() {
+    $wrap = $('#wp-sir-bulk-wrap');
+    if (!$wrap.length) return;
+
+    $stateIdle   = $('#wp-sir-state-idle');
+    $stateActive = $('#wp-sir-state-active');
+    $stateDone   = $('#wp-sir-state-done');
+
+    $btnStart   = $('#wp-sir-bulk-start');
+    $btnPause   = $('#wp-sir-bulk-pause');
+    $btnResume  = $('#wp-sir-bulk-resume');
+    $btnRestart = $('#wp-sir-bulk-restart');
+    $btnAbort   = $('#wp-sir-bulk-abort');
+
+    $statusLabel     = $('#wp-sir-status-label');
+    $doneCount       = $('#wp-sir-done-count');
+    $totalCount      = $('#wp-sir-total-count');
+    $progressBar     = $('#wp-sir-progress-bar');
+    $progressBarWrap = $('#wp-sir-progress-bar-wrap');
+    $percentLabel    = $('#wp-sir-percent-label');
+    $doneSummary     = $('#wp-sir-done-summary');
+
+    $errorLog        = $('#wp-sir-error-log');
+    $errorLogToggle  = $('#wp-sir-error-log-toggle');
+    $errorLogTitle   = $('#wp-sir-error-log-title');
+    $errorLogBody    = $('#wp-sir-error-log-body');
+    $errorTableBody  = $('#wp-sir-error-table-body');
+
+    // Collapsible error log.
+    $errorLogToggle.on('click keydown', function (e) {
+      if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) return;
+      var expanded = $errorLogToggle.attr('aria-expanded') === 'true';
+      $errorLogToggle.attr('aria-expanded', !expanded);
+      $errorLogBody.slideToggle(150);
+      $errorLogToggle.find('.wp-sir-error-log-chevron')
+        .toggleClass('dashicons-arrow-down-alt2', expanded)
+        .toggleClass('dashicons-arrow-up-alt2', !expanded);
+    });
+
+    $btnStart.on('click',   function () { startProcess(false); });
+    $btnPause.on('click',   pauseProcess);
+    $btnResume.on('click',  function () { resumeProcess(); });
+    $btnRestart.on('click', function () {
+      startProcess(true);
+    });
+    $btnAbort.on('click', function () {
+      if (!window.confirm('Abort this process? Progress will be cleared and you can start fresh.')) return;
+      _aborted = true;
+      var $icon = $btnAbort.find('.dashicons');
+      var $label = $btnAbort.contents().filter(function() { return this.nodeType === 3; }).last();
+      $btnAbort.prop('disabled', true);
+      $label[0].textContent = ' Aborting\u2026';
+      ajax(bulk.action_reset, {}, function (res) {
+        $label[0].textContent = ' Abort';
+        $btnAbort.prop('disabled', false);
+        _allErrors = [];
+        $errorTableBody.empty();
+        $errorLog.hide();
+        if (res && res.success) {
+          applyState({ status: 'idle' });
+        }
+      });
+    });
+
+    fetchStatus();
+  }
+
+  // ── API ────────────────────────────────────────────────────────────────────
+
+  function ajax(action, extraData, callback) {
+    $.post(ajaxUrl, $.extend({ action: action, nonce: nonce }, extraData || {}), callback, 'json');
+  }
+
+  function fetchStatus() {
+    ajax(bulk.action_status, {}, function (res) {
+      if (res && res.success) {
+        // Restore any previously stored errors on page load.
+        if (res.data.new_errors && res.data.new_errors.length) {
+          appendErrors(res.data.new_errors);
+        }
+
+        // On a fresh page load there is no active tick loop.
+        // If the server says "running" it means the previous session was
+        // interrupted (tab closed, reload, crash). Treat it as paused so
+        // the user sees Resume, not Pause with nothing actually processing.
+        if (res.data.status === 'running') {
+          res.data.status = 'paused';
+          // Tell the server to record the paused state too, fire-and-forget.
+          ajax(bulk.action_pause, {}, function () {});
+        }
+
+        applyState(res.data);
+      }
+    });
+  }
+
+  function startProcess(restart) {
+    _aborted = false;
+    // Always clear the client-side error log before starting or restarting —
+    // the server truncates the errors table on both paths too.
+    _allErrors = [];
+    $errorTableBody.empty();
+    $errorLog.hide();
+    ajax(bulk.action_start, { restart: restart ? 1 : 0 }, function (res) {
+      if (res && res.success) {
+        applyState(res.data);
+        if (res.data.status === 'running') tick();
+      }
+    });
+  }
+
+  function resumeProcess() {
+    _aborted = false;
+    ajax(bulk.action_start, { restart: 0 }, function (res) {
+      if (res && res.success) {
+        applyState(res.data);
+        if (res.data.status === 'running') tick();
+      }
+    });
+  }
+
+  function pauseProcess() {
+    _aborted = true;
+    // Update UI immediately — don't wait for the server round-trip.
+    $statusLabel.text('Pausing\u2026');
+    $btnPause.prop('disabled', true);
+    ajax(bulk.action_pause, {}, function (res) {
+      $btnPause.prop('disabled', false);
+      if (res && res.success) applyState(res.data);
+    });
+  }
+
+  function tick() {
+    if (_aborted) return;
+
+    ajax(bulk.action_process, {}, function (res) {
+      if (_aborted) return; // pause was clicked while this request was in-flight
+
+      if (!res || !res.success) {
+        _aborted = true;
+        applyState({ status: 'paused', total: parseInt($totalCount.text(), 10), done: parseInt($doneCount.text(), 10), error_count: _allErrors.length });
+        return;
+      }
+
+      // Append any new errors from this batch immediately.
+      if (res.data.new_errors && res.data.new_errors.length) {
+        appendErrors(res.data.new_errors);
+      }
+
+      applyState(res.data);
+
+      if (res.data.status === 'running') {
+        setTimeout(tick, 300);
+      }
+    });
+  }
+
+  // ── Error log helpers ──────────────────────────────────────────────────────
+
+  function appendErrors(errors) {
+    if (!errors || !errors.length) return;
+
+    errors.forEach(function (err) {
+      _allErrors.push(err);
+      var $row = $('<tr>')
+        .append($('<td class="wp-sir-error-file">').text(err.file))
+        .append($('<td class="wp-sir-error-reason">').text(err.reason));
+      $errorTableBody.append($row);
+    });
+
+    // Update header count and show the log.
+    var count = _allErrors.length;
+    $errorLogTitle.text(count + ' image' + (count !== 1 ? 's' : '') + ' skipped');
+    $errorLog.show();
+  }
+
+  // ── UI state ───────────────────────────────────────────────────────────────
+
+  function applyState(data) {
+    var status = data.status || 'idle';
+    var total  = parseInt(data.total, 10) || 0;
+    var done   = parseInt(data.done,  10) || 0;
+    var pct    = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    $stateIdle.hide();
+    $stateActive.hide();
+    $stateDone.hide();
+
+    if (status === 'idle') {
+      $stateIdle.show();
+      return;
+    }
+
+    if (status === 'done') {
+      $stateDone.show();
+      var skipped = _allErrors.length;
+      var succeeded = done - skipped;
+      var summary = succeeded + ' image' + (succeeded !== 1 ? 's' : '') + ' processed successfully.';
+      if (skipped > 0) {
+        summary += ' ' + skipped + ' image' + (skipped !== 1 ? 's' : '') + ' were skipped — see the log below.';
+      }
+      $doneSummary.text(summary);
+      return;
+    }
+
+    // running or paused
+    $stateActive.show();
+    $doneCount.text(done);
+    $totalCount.text(total);
+    $percentLabel.text(pct + '%');
+    $progressBar.css('width', pct + '%');
+    $progressBarWrap.attr('aria-valuenow', pct);
+
+    if (status === 'running') {
+      $statusLabel.text('Processing\u2026');
+      $btnPause.show();
+      $btnResume.hide();
+      $btnAbort.hide();
+    } else {
+      $statusLabel.text('Paused');
+      $btnPause.hide();
+      $btnResume.show();
+      $btnAbort.show();
+    }
+  }
+
+  $(document).ready(init);
+
+})(jQuery);
 
 })(jQuery);
 
