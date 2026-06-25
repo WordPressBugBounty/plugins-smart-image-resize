@@ -36,16 +36,19 @@ class Bulk_Processor {
     const OPT_LEGACY_Q  = 'wp_sir_bulk_queue';
     const OPT_LEGACY_E  = 'wp_sir_bulk_errors';
 
-    const BATCH_SIZE    = 5;
+    const BATCH_SIZE    = 1;
     const AJAX_START    = 'wp_sir_bulk_start';
     const AJAX_PROCESS  = 'wp_sir_bulk_process';
     const AJAX_PAUSE    = 'wp_sir_bulk_pause';
     const AJAX_RESET    = 'wp_sir_bulk_reset';
     const AJAX_STATUS   = 'wp_sir_bulk_status';
+    const AJAX_COUNT    = 'wp_sir_bulk_count';
 
     // -------------------------------------------------------------------------
     // Bootstrap
     // -------------------------------------------------------------------------
+
+    const CACHE_COUNT_KEY = 'wp_sir_bulk_processable_count';
 
     public function init() {
         add_action( 'wp_ajax_' . self::AJAX_START,   [ $this, 'ajax_start' ] );
@@ -53,6 +56,37 @@ class Bulk_Processor {
         add_action( 'wp_ajax_' . self::AJAX_PAUSE,   [ $this, 'ajax_pause' ] );
         add_action( 'wp_ajax_' . self::AJAX_RESET,   [ $this, 'ajax_reset' ] );
         add_action( 'wp_ajax_' . self::AJAX_STATUS,  [ $this, 'ajax_status' ] );
+        add_action( 'wp_ajax_' . self::AJAX_COUNT,   [ $this, 'ajax_count' ] );
+
+        // Invalidate cached count when images are added/deleted or settings change.
+        add_action( 'add_attachment',    [ __CLASS__, 'invalidate_count_cache' ] );
+        add_action( 'delete_attachment', [ __CLASS__, 'invalidate_count_cache' ] );
+        add_action( 'update_option_wp_sir_settings', [ __CLASS__, 'invalidate_count_cache' ] );
+    }
+
+    /**
+     * Clear the cached processable image count.
+     */
+    public static function invalidate_count_cache() {
+        delete_transient( self::CACHE_COUNT_KEY );
+    }
+
+    /**
+     * AJAX: return the number of images eligible for processing.
+     * Result is cached until a new image is added/deleted or settings change.
+     */
+    public function ajax_count() {
+        $this->check_request();
+
+        $count = get_transient( self::CACHE_COUNT_KEY );
+
+        if ( false === $count ) {
+            $ids   = $this->get_processable_ids();
+            $count = count( $ids );
+            set_transient( self::CACHE_COUNT_KEY, $count, HOUR_IN_SECONDS );
+        }
+
+        wp_send_json_success( [ 'count' => (int) $count ] );
     }
 
     /**
@@ -166,6 +200,7 @@ class Bulk_Processor {
             $state['status']      = 'done';
             $state['finished_at'] = current_time( 'mysql' );
             $this->save_state( $state );
+            self::invalidate_count_cache();
             wp_send_json_success( $this->public_state( $state ) );
         }
 
@@ -210,6 +245,7 @@ class Bulk_Processor {
         if ( $state['offset'] >= $state['total'] ) {
             $state['status']      = 'done';
             $state['finished_at'] = current_time( 'mysql' );
+            self::invalidate_count_cache();
         }
 
         if ( ! empty( $batch_errors ) ) {
@@ -417,9 +453,30 @@ class Bulk_Processor {
     }
 
     private function get_processable_ids(): array {
+        global $wpdb;
+
         $filter = new Filters\Filter_Processable_Regenerate_Thumbnails();
         $ids    = $filter->filter_processable_images();
-        return array_values( array_map( 'intval', array_unique( array_filter( $ids ) ) ) );
+        $ids    = array_values( array_map( 'intval', array_unique( array_filter( $ids ) ) ) );
+
+        if ( empty( $ids ) ) {
+            return [];
+        }
+
+        // Filter out IDs that no longer exist as image attachments.
+        $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+        $valid_ids    = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts}
+                 WHERE ID IN ($placeholders)
+                   AND post_type = 'attachment'
+                   AND post_mime_type LIKE 'image/%%'
+                   AND post_status != 'trash'",
+                $ids
+            )
+        );
+
+        return array_values( array_map( 'intval', $valid_ids ) );
     }
 
     /**

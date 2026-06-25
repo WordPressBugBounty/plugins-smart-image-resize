@@ -652,6 +652,18 @@ $('.wp-sir-tabs div').on('click', function(e) {
       $btn.attr('aria-expanded', !expanded);
     });
 
+    // Image Uniformity enable/disable — dim the card body when off.
+    function toggleUniformityState() {
+      var $card = $('#wp-sir-core-settings');
+      if ($('#wp-sir-enable').is(':checked')) {
+        $card.removeClass('wp-sir-card--disabled');
+      } else {
+        $card.addClass('wp-sir-card--disabled');
+      }
+    }
+    toggleUniformityState();
+    $('#wp-sir-enable').on('change', toggleUniformityState);
+
     // Add-on card expand / collapse via header click
     // The toggle checkbox itself is handled separately to avoid double-firing.
     $(document).on('click', '.wp-sir-addon-card__header', function (e) {
@@ -714,6 +726,8 @@ $('.wp-sir-tabs div').on('click', function(e) {
   // All errors accumulated across the entire session (survives ticks).
   var _allErrors = [];
   var _aborted   = false;
+  var _started   = false; // True once user initiates a process — prevents stale fetchStatus data.
+  var _done      = false; // True once done state is shown — prevents late callbacks overriding it.
 
   // DOM refs — resolved once the page is ready.
   var $wrap, $stateIdle, $stateActive, $stateDone;
@@ -722,6 +736,7 @@ $('.wp-sir-tabs div').on('click', function(e) {
   var $progressBar, $progressBarWrap, $percentLabel;
   var $doneSummary;
   var $errorLog, $errorLogToggle, $errorLogTitle, $errorLogBody, $errorTableBody;
+  var $idleMessage, $idleHint;
 
   function init() {
     $wrap = $('#wp-sir-bulk-wrap');
@@ -750,6 +765,8 @@ $('.wp-sir-tabs div').on('click', function(e) {
     $errorLogTitle   = $('#wp-sir-error-log-title');
     $errorLogBody    = $('#wp-sir-error-log-body');
     $errorTableBody  = $('#wp-sir-error-table-body');
+    $idleMessage     = $('#wp-sir-idle-message');
+    $idleHint        = $('#wp-sir-idle-hint');
 
     // Collapsible error log.
     $errorLogToggle.on('click keydown', function (e) {
@@ -783,14 +800,35 @@ $('.wp-sir-tabs div').on('click', function(e) {
         $errorLog.hide();
         if (res && res.success) {
           applyState({ status: 'idle' });
+          fetchCount();
         }
       });
     });
 
     fetchStatus();
+
+    // Refresh count link — manual recount.
+    $('#wp-sir-refresh-count').on('click', function (e) {
+      e.preventDefault();
+      var $link = $(this);
+      $link.addClass('wp-sir-refresh-count--spinning');
+      ajax(bulk.action_count, {}, function (res) {
+        $link.removeClass('wp-sir-refresh-count--spinning');
+        if (res && res.success) {
+          applyCount(parseInt(res.data.count, 10) || 0);
+        }
+      });
+    });
+
+    // If no cached count was available server-side, fetch it now.
+    if ($btnStart.prop('disabled') && $idleMessage.text().indexOf('Checking') !== -1) {
+      prefetchCount();
+    }
   }
 
   // ── API ────────────────────────────────────────────────────────────────────
+
+  var _prefetchedCount = null;
 
   function ajax(action, extraData, callback) {
     $.post(ajaxUrl, $.extend({ action: action, nonce: nonce }, extraData || {}), callback, 'json');
@@ -799,8 +837,9 @@ $('.wp-sir-tabs div').on('click', function(e) {
   function fetchStatus() {
     ajax(bulk.action_status, {}, function (res) {
       if (res && res.success) {
-        // Restore any previously stored errors on page load.
-        if (res.data.new_errors && res.data.new_errors.length) {
+        // Only restore errors from a previous session if we haven't already
+        // started a new process (prevents race condition on fast clicks).
+        if (!_started && res.data.new_errors && res.data.new_errors.length && res.data.status !== 'running') {
           appendErrors(res.data.new_errors);
         }
 
@@ -811,22 +850,76 @@ $('.wp-sir-tabs div').on('click', function(e) {
         if (res.data.status === 'running') {
           res.data.status = 'paused';
           // Tell the server to record the paused state too, fire-and-forget.
-          ajax(bulk.action_pause, {}, function () {});
+          ajax(bulk.action_pause, {});
         }
 
         applyState(res.data);
+
+        // If idle, apply the prefetched count (or wait for it).
+        if (!res.data.status || res.data.status === 'idle') {
+          applyCount(_prefetchedCount);
+        }
+      }
+    });
+  }
+
+  // Fire the count request in parallel with fetchStatus for faster load.
+  function prefetchCount() {
+    ajax(bulk.action_count, {}, function (res) {
+      if (res && res.success) {
+        _prefetchedCount = parseInt(res.data.count, 10) || 0;
+      } else {
+        _prefetchedCount = -1; // error state
+      }
+      // If idle state is already shown, apply immediately.
+      if ($stateIdle.is(':visible')) {
+        applyCount(_prefetchedCount);
+      }
+    });
+  }
+
+  function applyCount(count) {
+    if (count === null) return; // still loading
+    if (count === -1) {
+      $idleMessage.text('Ready to process your images.');
+      $idleHint.show();
+      $btnStart.prop('disabled', false);
+      return;
+    }
+    if (count > 0) {
+      $idleMessage.text(count + ' image' + (count !== 1 ? 's' : '') + ' ready to be processed.');
+      $btnStart.prop('disabled', false);
+    } else {
+      $idleMessage.text('All your images are already up to date.');
+      $btnStart.prop('disabled', true);
+    }
+    $idleHint.show();
+  }
+
+  function fetchCount() {
+    // Used after abort — fires a fresh count request.
+    ajax(bulk.action_count, {}, function (res) {
+      if (res && res.success) {
+        applyCount(parseInt(res.data.count, 10) || 0);
+      } else {
+        applyCount(-1);
       }
     });
   }
 
   function startProcess(restart) {
     _aborted = false;
+    _started = true;
+    _done = false;
     // Always clear the client-side error log before starting or restarting —
     // the server truncates the errors table on both paths too.
     _allErrors = [];
     $errorTableBody.empty();
     $errorLog.hide();
+    // Instant feedback — disable button and show loading state.
+    $btnStart.prop('disabled', true).addClass('wp-sir-btn-loading');
     ajax(bulk.action_start, { restart: restart ? 1 : 0 }, function (res) {
+      $btnStart.prop('disabled', false).removeClass('wp-sir-btn-loading');
       if (res && res.success) {
         applyState(res.data);
         if (res.data.status === 'running') tick();
@@ -836,6 +929,11 @@ $('.wp-sir-tabs div').on('click', function(e) {
 
   function resumeProcess() {
     _aborted = false;
+    // Instant feedback — hide resume, show pause immediately.
+    $btnResume.hide();
+    $btnAbort.hide();
+    $btnPause.css('display', 'inline-flex');
+    $statusLabel.text('Processing\u2026');
     ajax(bulk.action_start, { restart: 0 }, function (res) {
       if (res && res.success) {
         applyState(res.data);
@@ -846,11 +944,10 @@ $('.wp-sir-tabs div').on('click', function(e) {
 
   function pauseProcess() {
     _aborted = true;
-    // Update UI immediately — don't wait for the server round-trip.
-    $statusLabel.text('Pausing\u2026');
-    $btnPause.prop('disabled', true);
+    // Instant feedback — disable button and show loading state.
+    $btnPause.prop('disabled', true).addClass('wp-sir-btn-loading');
     ajax(bulk.action_pause, {}, function (res) {
-      $btnPause.prop('disabled', false);
+      $btnPause.prop('disabled', false).removeClass('wp-sir-btn-loading');
       if (res && res.success) applyState(res.data);
     });
   }
@@ -907,16 +1004,26 @@ $('.wp-sir-tabs div').on('click', function(e) {
     var done   = parseInt(data.done,  10) || 0;
     var pct    = total > 0 ? Math.round((done / total) * 100) : 0;
 
+    // Once done, don't allow late callbacks to revert to another state.
+    if (_done && status !== 'done' && status !== 'idle') {
+      return;
+    }
+
+    // Hide loading placeholder once real state is known.
+    $('#wp-sir-state-loading').remove();
+
     $stateIdle.hide();
     $stateActive.hide();
     $stateDone.hide();
 
     if (status === 'idle') {
+      _done = false;
       $stateIdle.show();
       return;
     }
 
     if (status === 'done') {
+      _done = true;
       $stateDone.show();
       var skipped = _allErrors.length;
       var succeeded = done - skipped;
@@ -938,14 +1045,16 @@ $('.wp-sir-tabs div').on('click', function(e) {
 
     if (status === 'running') {
       $statusLabel.text('Processing\u2026');
-      $btnPause.show();
+      $btnPause.css('display', 'inline-flex');
       $btnResume.hide();
       $btnAbort.hide();
+      $progressBar.removeClass('wp-sir-bulk-progress-bar--paused');
     } else {
       $statusLabel.text('Paused');
       $btnPause.hide();
-      $btnResume.show();
-      $btnAbort.show();
+      $btnResume.css('display', 'inline-flex');
+      $btnAbort.css('display', 'inline-flex');
+      $progressBar.addClass('wp-sir-bulk-progress-bar--paused');
     }
   }
 
@@ -957,3 +1066,122 @@ $('.wp-sir-tabs div').on('click', function(e) {
 
 
 
+
+
+
+// ─── Reset images (settings page) ────────────────────────────────────────────
+(function ($) {
+  'use strict';
+
+  $(document).ready(function () {
+
+    if (!$('#wp-sir-reset-section').length) return;
+
+    var ajaxUrl = wp_sir_object.ajax_url;
+    var nonce   = wp_sir_object.restore_nonce;
+    var BATCH   = 5;
+
+    var $btnStart     = $('#wp-sir-reset-start');
+    var $countLabel   = $('#wp-sir-reset-count');
+    var $stateIdle    = $('#wp-sir-reset-state-idle');
+    var $stateRunning = $('#wp-sir-reset-state-running');
+    var $stateDone    = $('#wp-sir-reset-state-done');
+    var $progressBar  = $('#wp-sir-reset-progress-bar');
+    var $progressWrap = $('#wp-sir-reset-progress-wrap');
+    var $pct          = $('#wp-sir-reset-percent');
+    var $doneCount    = $('#wp-sir-reset-done');
+    var $totalCount   = $('#wp-sir-reset-total');
+    var $summary      = $('#wp-sir-reset-summary');
+    var $errorsWrap   = $('#wp-sir-reset-errors');
+    var $errorList    = $('#wp-sir-reset-error-list');
+
+    var _ids    = [];
+    var _total  = 0;
+    var _done   = 0;
+    var _errors = [];
+    var _stopped = false;
+
+    // Fetch count of processed images on page load.
+    $.post(ajaxUrl, { action: 'wp_sir_bulk_restore_status', nonce: nonce }, function (res) {
+      if (res && res.success && res.data.total > 0) {
+        _ids   = res.data.ids;
+        _total = res.data.total;
+        $countLabel.text('(' + _total + ' image' + (_total !== 1 ? 's' : '') + ' processed)');
+        $btnStart.prop('disabled', false);
+      } else {
+        $countLabel.text('(' + wp_sir_object.i18n.no_processed_images + ')');
+      }
+    }, 'json');
+
+    $btnStart.on('click', function () {
+      if (!_ids.length) return;
+      if (!window.confirm(wp_sir_object.i18n.restore_confirm)) return;
+
+      _done    = 0;
+      _errors  = [];
+      _stopped = false;
+      $errorList.empty();
+      $errorsWrap.hide();
+      $stateIdle.hide();
+      $stateRunning.show();
+      $stateDone.hide();
+      $totalCount.text(_total);
+      processBatch();
+    });
+
+    $('#wp-sir-reset-stop').on('click', function () {
+      _stopped = true;
+      $(this).prop('disabled', true).text('Stopping…');
+    });
+
+    function processBatch() {
+      if (_stopped) { finish(); return; }
+      var batch = _ids.slice(_done, _done + BATCH);
+      if (!batch.length) { finish(); return; }
+
+      $.post(ajaxUrl, {
+        action: 'wp_sir_bulk_restore_batch',
+        nonce:  nonce,
+        ids:    JSON.stringify(batch)
+      }, function (res) {
+        if (!res || !res.success) { finish(); return; }
+
+        _done += batch.length;
+
+        if (res.data.errors && res.data.errors.length) {
+          res.data.errors.forEach(function (e) {
+            _errors.push(e);
+            $errorList.append('<li>ID ' + e.id + ': ' + $('<span>').text(e.reason).html() + '</li>');
+          });
+          $errorsWrap.show();
+        }
+
+        var percent = Math.round((_done / _total) * 100);
+        $progressBar.css('width', percent + '%');
+        $progressWrap.attr('aria-valuenow', percent);
+        $pct.text(percent + '%');
+        $doneCount.text(_done);
+
+        if (_done >= _total) { finish(); } else if (!_stopped) { setTimeout(processBatch, 300); } else { finish(); }
+      }, 'json');
+    }
+
+    function finish() {
+      $stateRunning.hide();
+      $stateDone.show();
+      $('#wp-sir-reset-stop').prop('disabled', false).text('Stop');
+
+      var succeeded = _done - _errors.length;
+      var s = succeeded + ' image' + (succeeded !== 1 ? 's' : '') + ' restored to original state.';
+      if (_stopped && _done < _total) { s += ' Stopped — ' + (_total - _done) + ' remaining.'; }
+      if (_errors.length) { s += ' ' + _errors.length + ' failed — see above.'; }
+      $summary.text(s);
+
+      _ids = [];
+      $btnStart.prop('disabled', true);
+      $countLabel.text('(' + wp_sir_object.i18n.no_processed_images + ')');
+    }
+
+  });
+
+})(jQuery);

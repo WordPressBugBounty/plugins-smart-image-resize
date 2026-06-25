@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'general';
+$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'bulk-regenerate';
 $settings    = wp_sir_get_settings();
 ?>
 <div class="wrap wp-sir-wrap">
@@ -23,15 +23,15 @@ $settings    = wp_sir_get_settings();
 	
 
 	<nav class="nav-tab-wrapper wp-sir-nav" aria-label="<?php esc_attr_e( 'Plugin navigation', 'wp-smart-image-resize' ); ?>">
+		<a href="?page=wp-smart-image-resize&amp;tab=bulk-regenerate"
+		   class="nav-tab <?php echo $current_tab === 'bulk-regenerate' ? 'nav-tab-active' : ''; ?>">
+			<span class="dashicons dashicons-images-alt2" aria-hidden="true"></span>
+			<?php esc_html_e( 'Bulk Resize', 'wp-smart-image-resize' ); ?>
+		</a>
 		<a href="?page=wp-smart-image-resize&amp;tab=general"
 		   class="nav-tab <?php echo $current_tab === 'general' ? 'nav-tab-active' : ''; ?>">
 			<span class="dashicons dashicons-admin-settings" aria-hidden="true"></span>
 			<?php esc_html_e( 'Settings', 'wp-smart-image-resize' ); ?>
-		</a>
-		<a href="?page=wp-smart-image-resize&amp;tab=bulk-regenerate"
-		   class="nav-tab <?php echo $current_tab === 'bulk-regenerate' ? 'nav-tab-active' : ''; ?>">
-			<span class="dashicons dashicons-update" aria-hidden="true"></span>
-			<?php esc_html_e( 'Bulk Regenerate', 'wp-smart-image-resize' ); ?>
 		</a>
 		
 		<a href="?page=wp-smart-image-resize&amp;tab=help"
@@ -56,46 +56,30 @@ $settings    = wp_sir_get_settings();
 					settings_fields( WP_SIR_NAME );
 					?>
 
-					<!-- ══ HERO: Image Uniformity ══════════════════════════ -->
-					<div class="wp-sir-hero-card" id="wp-sir-hero">
-						<div class="wp-sir-hero-card__icon" aria-hidden="true">
-							<span class="dashicons dashicons-images-alt2"></span>
-						</div>
-						<div class="wp-sir-hero-card__body">
-							<div class="wp-sir-hero-card__heading">
-								<h2><?php esc_html_e( 'Image Uniformity', 'wp-smart-image-resize' ); ?></h2>
-								<label class="wp-sir-big-toggle" for="wp-sir-enable" title="<?php esc_attr_e( 'Enable or disable image uniformity', 'wp-smart-image-resize' ); ?>">
-									<input type="checkbox"
-									       class="wp-sir-as-toggle wp-sir-as-toggle--large"
-									       name="wp_sir_settings[enable]"
-									       id="wp-sir-enable"
-									       value="1"
-									       <?php checked( $settings['enable'], 1 ); ?> />
-									<span class="screen-reader-text"><?php esc_html_e( 'Enable Image Uniformity', 'wp-smart-image-resize' ); ?></span>
-								</label>
-							</div>
-							<p class="wp-sir-hero-card__desc">
-								<?php esc_html_e( 'Automatically resize uploaded images to ensure a consistent look across your store.', 'wp-smart-image-resize' ); ?>
-							</p>
-
-							
-							<?php echo \WP_Smart_Image_Resize\Quota::show_quota_status(); ?>
-							
-						</div>
-					</div><!-- /.wp-sir-hero-card -->
-
-					<!-- ══ CORE SETTINGS (always visible) ═════════════════ -->
+					<!-- ══ CORE SETTINGS ══════════════════════════════════ -->
 					<div class="wp-sir-card" id="wp-sir-core-settings">
 						<div class="wp-sir-card__header">
-							<span class="dashicons dashicons-admin-settings wp-sir-card__icon" aria-hidden="true"></span>
-							<h3><?php esc_html_e( 'Uniformity Settings', 'wp-smart-image-resize' ); ?></h3>
+							<span class="dashicons dashicons-images-alt2 wp-sir-card__icon" aria-hidden="true"></span>
+							<div>
+								<h3><?php esc_html_e( 'Auto-Resize', 'wp-smart-image-resize' ); ?></h3>
+								<span class="wp-sir-card__desc"><?php esc_html_e( 'Automatically resize uploaded images to ensure a consistent look across your store.', 'wp-smart-image-resize' ); ?></span>
+							</div>
+							<label class="wp-sir-big-toggle" for="wp-sir-enable" title="<?php esc_attr_e( 'Enable or disable image uniformity', 'wp-smart-image-resize' ); ?>">
+								<input type="checkbox"
+								       class="wp-sir-as-toggle wp-sir-as-toggle--large"
+								       name="wp_sir_settings[enable]"
+								       id="wp-sir-enable"
+								       value="1"
+								       <?php checked( $settings['enable'], 1 ); ?> />
+								<span class="screen-reader-text"><?php esc_html_e( 'Enable Image Uniformity', 'wp-smart-image-resize' ); ?></span>
+							</label>
 						</div>
 						<div class="wp-sir-card__body">
 
 							<!-- Apply to -->
 							<div class="wp-sir-field">
 								<label class="wp-sir-field__label">
-									<?php esc_html_e( 'Apply to', 'wp-smart-image-resize' ); ?>
+									<?php esc_html_e( 'Process Images from', 'wp-smart-image-resize' ); ?>
 									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Choose which image types the plugin should process images for. Only images attached to the selected content will be resized.', 'wp-smart-image-resize' ); ?>"></span>
 								</label>
 								<div class="wp-sir-field__control">
@@ -139,6 +123,17 @@ $settings    = wp_sir_get_settings();
 						<!-- Advanced fields (hidden by default) -->
 						<div id="wp-sir-advanced-fields" class="wp-sir-card__body wp-sir-advanced-body" style="display:none; border-top:1px solid #f0f0f0;">
 
+							<!-- Resize Original Image -->
+							<div class="wp-sir-field">
+								<label class="wp-sir-field__label">
+									<?php esc_html_e( 'Resize Original Image', 'wp-smart-image-resize' ); ?>
+									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Add padding to the original image so it has the same aspect ratio as thumbnails. Useful if your theme displays the full-size image directly. Other features like watermark, compression, and format conversion are always applied to the original when enabled.', 'wp-smart-image-resize' ); ?>"></span>
+								</label>
+								<div class="wp-sir-field__control">
+									<?php $this->settings_field_process_original(); ?>
+								</div>
+							</div>
+
 							<!-- Disable Upscale -->
 							<div class="wp-sir-field">
 								<label class="wp-sir-field__label">
@@ -178,17 +173,17 @@ $settings    = wp_sir_get_settings();
 
 					</div><!-- /.wp-sir-card #wp-sir-core-settings -->
 
-					<!-- ══ ADD-ONS ══════════════════════════════════════════ -->
+					<!-- ══ IMAGE TOOLS ═════════════════════════════════════ -->
 					<div class="wp-sir-addons-header">
 						<span class="wp-sir-addons-header__line" aria-hidden="true"></span>
-						<span class="wp-sir-addons-header__label"><?php esc_html_e( 'Add-ons', 'wp-smart-image-resize' ); ?></span>
+						<span class="wp-sir-addons-header__label"><?php esc_html_e( 'Image Tools', 'wp-smart-image-resize' ); ?></span>
 						<span class="wp-sir-addons-header__line" aria-hidden="true"></span>
 					</div>
 
-					<!-- Add-on: Optimization -->
+					<!-- Tool: Optimization -->
 					<div class="wp-sir-addon-card" id="wp-sir-addon-optimization">
 						<div class="wp-sir-addon-card__header" role="button" tabindex="0"
-						     aria-expanded="<?php echo ( $settings['jpg_convert'] || $settings['enable_webp'] ) ? 'true' : 'false'; ?>"
+						     aria-expanded="false"
 						     aria-controls="wp-sir-addon-optimization-body">
 							<div class="wp-sir-addon-card__title">
 								<span class="dashicons dashicons-performance wp-sir-addon-card__icon" aria-hidden="true"></span>
@@ -201,8 +196,7 @@ $settings    = wp_sir_get_settings();
 								<span class="dashicons dashicons-arrow-down-alt2 wp-sir-addon-chevron" aria-hidden="true"></span>
 							</div>
 						</div>
-						<div class="wp-sir-addon-card__body" id="wp-sir-addon-optimization-body"
-						     style="display:<?php echo ( $settings['jpg_convert'] || $settings['enable_webp'] ) ? 'block' : 'none'; ?>">
+						<div class="wp-sir-addon-card__body" id="wp-sir-addon-optimization-body" style="display:none;">
 
 							<!-- Image Compression -->
 							<div class="wp-sir-field">
@@ -242,11 +236,95 @@ $settings    = wp_sir_get_settings();
 
 					
 
+					
+					<!-- Tool: Watermark (Lite — teaser showing locked Pro UI) -->
+					<div class="wp-sir-addon-card wp-sir-addon-card--locked" id="wp-sir-addon-watermark-teaser">
+						<div class="wp-sir-addon-card__header" role="button" tabindex="0" aria-expanded="false" aria-controls="wp-sir-addon-watermark-teaser-body">
+							<div class="wp-sir-addon-card__title">
+								<span class="dashicons dashicons-art wp-sir-addon-card__icon" aria-hidden="true"></span>
+								<div>
+									<strong><?php esc_html_e( 'Watermark', 'wp-smart-image-resize' ); ?> <a href="https://sirplugin.com/?utm_source=wp&amp;utm_medium=plugin&amp;utm_campaign=watermark_teaser" target="_blank" class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></a></strong>
+									<span class="wp-sir-addon-card__desc"><?php esc_html_e( 'Protect your images and build brand identity.', 'wp-smart-image-resize' ); ?></span>
+								</div>
+							</div>
+							<div class="wp-sir-addon-card__toggle-wrap">
+								<span class="dashicons dashicons-arrow-down-alt2 wp-sir-addon-chevron" aria-hidden="true"></span>
+							</div>
+						</div>
+						<div class="wp-sir-addon-card__body wp-sir-addon-card__body--locked" id="wp-sir-addon-watermark-teaser-body" style="display:none;">
+							<div class="wp-sir-teaser-locked-wrap">
+								<!-- Fake controls (non-functional, for visual preview) -->
+								<div class="wp-sir-teaser-locked-ui" aria-hidden="true">
+									<div class="wp-sir-watermark-layout">
+										<div class="wp-sir-watermark-controls">
+											<div class="wp-sir-sub-field">
+												<span class="wp-sir-sub-field__label"><?php esc_html_e( 'Watermark Image', 'wp-smart-image-resize' ); ?></span>
+												<button type="button" class="button button-secondary" disabled>
+													<span class="dashicons dashicons-upload" style="margin-top:3px"></span>
+													<?php esc_html_e( 'Select / Upload Image', 'wp-smart-image-resize' ); ?>
+												</button>
+											</div>
+											<div class="wp-sir-sub-field">
+												<span class="wp-sir-sub-field__label"><?php esc_html_e( 'Size', 'wp-smart-image-resize' ); ?></span>
+												<div class="wp-sir-range-wrapper">
+													<input type="range" min="1" max="100" value="50" class="wp-sir-range-input" disabled />
+													<span class="wp-sir-range-value">50%</span>
+												</div>
+											</div>
+											<div class="wp-sir-sub-field">
+												<span class="wp-sir-sub-field__label"><?php esc_html_e( 'Opacity', 'wp-smart-image-resize' ); ?></span>
+												<div class="wp-sir-range-wrapper">
+													<input type="range" min="0" max="100" value="50" class="wp-sir-range-input" disabled />
+													<span class="wp-sir-range-value">50%</span>
+												</div>
+											</div>
+											<div class="wp-sir-sub-field">
+												<span class="wp-sir-sub-field__label"><?php esc_html_e( 'Position', 'wp-smart-image-resize' ); ?></span>
+												<div class="wp-sir-curve-control">
+													<div class="wp-sir-curve-row">
+														<span class="wp-sir-curve-point"></span>
+														<span class="wp-sir-curve-point"></span>
+														<span class="wp-sir-curve-point"></span>
+													</div>
+													<div class="wp-sir-curve-row">
+														<span class="wp-sir-curve-point"></span>
+														<span class="wp-sir-curve-point active"></span>
+														<span class="wp-sir-curve-point"></span>
+													</div>
+													<div class="wp-sir-curve-row">
+														<span class="wp-sir-curve-point"></span>
+														<span class="wp-sir-curve-point"></span>
+														<span class="wp-sir-curve-point"></span>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="wp-sir-watermark-preview-wrap">
+											<span class="wp-sir-sub-field__label"><?php esc_html_e( 'Preview', 'wp-smart-image-resize' ); ?></span>
+											<div class="wp-sir-watermark-preview-container" style="background-image:url(<?php echo esc_url( WP_SIR_URL . 'images/watermark-preview.jpg' ); ?>)"></div>
+										</div>
+									</div>
+								</div>
+								<!-- Lock overlay -->
+								<div class="wp-sir-teaser-overlay">
+									<div class="wp-sir-teaser-overlay__content">
+										<span class="dashicons dashicons-lock" aria-hidden="true"></span>
+										<p><?php esc_html_e( 'Upgrade to Pro to unlock watermarking', 'wp-smart-image-resize' ); ?></p>
+										<a href="https://sirplugin.com/?utm_source=wp&amp;utm_medium=plugin&amp;utm_campaign=watermark_teaser" target="_blank" class="wp-sir-teaser-btn">
+											<?php esc_html_e( 'Unlock Watermarking', 'wp-smart-image-resize' ); ?>
+										</a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- /.wp-sir-addon-card watermark teaser -->
+					
+
 
 					<!-- ══ SAVE BUTTONS ════════════════════════════════════ -->
 					<div class="wp-sir-form-actions">
 						<?php submit_button( __( 'Save Settings', 'wp-smart-image-resize' ), 'primary wp-sir-btn-save', 'submit', false ); ?>
-						<?php submit_button( __( 'Save &amp; Bulk Regenerate', 'wp-smart-image-resize' ), 'secondary', 'submit_and_bulk_resize', false ); ?>
+						<?php submit_button( __( 'Save & Bulk Resize', 'wp-smart-image-resize' ), 'secondary', 'submit_and_bulk_resize', false ); ?>
 					</div>
 
 				</form>
@@ -254,42 +332,7 @@ $settings    = wp_sir_get_settings();
 			</div><!-- /.wp-sir-main -->
 
 			<!-- ── SIDEBAR ──────────────────────────────────────────── -->
-			<aside class="wp-sir-sidebar" aria-label="<?php esc_attr_e( 'Sidebar', 'wp-smart-image-resize' ); ?>">
-				
-				<div class="wpsirInfoBox">
-					<div class="wpsirInfoBox-top">
-						<h3><?php esc_html_e( 'Unlock all features', 'wp-smart-image-resize' ); ?></h3>
-					</div>
-					<ul class="wpsirInfoBox-features">
-						<li><span class="dashicons dashicons-yes" aria-hidden="true"></span><?php esc_html_e( 'Unlimited image processing', 'wp-smart-image-resize' ); ?></li>
-						<li><span class="dashicons dashicons-yes" aria-hidden="true"></span><?php esc_html_e( 'Priority support', 'wp-smart-image-resize' ); ?></li>
-						<li style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;"><strong style="display: block; margin-bottom: 8px; color: #374151;"><?php esc_html_e( 'Add-ons:', 'wp-smart-image-resize' ); ?></strong></li>
-						<li><span class="dashicons dashicons-yes" aria-hidden="true"></span><?php esc_html_e( 'Watermarking', 'wp-smart-image-resize' ); ?></li>
-						<li><span class="dashicons dashicons-yes" aria-hidden="true"></span><?php esc_html_e( 'PNG → JPG conversion', 'wp-smart-image-resize' ); ?></li>
-						<li><span class="dashicons dashicons-yes" aria-hidden="true"></span><?php esc_html_e( 'WebP images', 'wp-smart-image-resize' ); ?></li>
-					</ul>
-					<div class="wpsirInfoBox-cta">
-						<a href="https://sirplugin.com?utm_source=wordpress&utm_medium=plugin&utm_campaign=sidebar" target="_blank" class="wpsirInfoBox-btn">
-							<?php esc_html_e( 'Upgrade to Pro', 'wp-smart-image-resize' ); ?>
-						</a>
-					</div>
-				</div>
-
-				<div class="wpsirAdBox">
-					<div class="wpsirAdBox-label"><?php esc_html_e( 'Also by us', 'wp-smart-image-resize' ); ?></div>
-					<div class="wpsirAdBox-body">
-						<div class="wpsirAdBox-icon"><img src="<?php echo esc_url( plugin_dir_url( dirname( __FILE__ ) ) . 'images/logo_hurryt.svg' ); ?>" alt="HurryTimer" width="32" height="32"></div>
-						<div class="wpsirAdBox-content">
-							<strong>HurryTimer</strong>
-							<p><?php esc_html_e( 'Run evergreen, recurring, and shipping cutoff countdown timers to drive more conversions across your store.', 'wp-smart-image-resize' ); ?></p>
-							<a href="https://hurrytimer.com?utm_source=wp-smart-image-resize&utm_medium=plugin&utm_campaign=sidebar" target="_blank" class="wpsirAdBox-link">
-								<?php esc_html_e( 'Learn more', 'wp-smart-image-resize' ); ?> →
-							</a>
-						</div>
-					</div>
-				</div>
-				
-			</aside><!-- /.wp-sir-sidebar -->
+			<?php include WP_SIR_DIR . 'templates/partials/sidebar.php'; ?>
 
 		</div><!-- /.wp-sir-layout -->
 

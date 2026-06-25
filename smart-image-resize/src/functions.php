@@ -57,6 +57,7 @@ function _wp_sir_get_default_settings() {
         ],
         'crop_mode'=> 'pad', //@experimental
         'disable_upscale'=> 0,
+        'process_original'  => 0,
     ];
 }
 if (!function_exists('wp_sir_get_settings')) {
@@ -783,4 +784,57 @@ function _wp_sir_get_excluded_sizes($filtered = true){
     }
      return $excluded_sizes;
 
+}
+
+/**
+ * Resolve the size whose aspect ratio the original image should be padded to.
+ *
+ * Priority order:
+ *   1. woocommerce_single / shop_single  (the canonical full-product-view size)
+ *   2. large
+ *   3. First selected size that has both width and height defined
+ *
+ * Returns an array with 'width' and 'height' keys, or null if nothing usable
+ * can be found.
+ *
+ * @access private
+ * @internal
+ *
+ * @return array|null
+ */
+function _wp_sir_get_original_pad_target_size() {
+    $settings     = wp_sir_get_settings();
+    $selected     = (array) $settings['sizes'];
+    $size_options = (array) $settings['size_options'];
+
+    // Candidates in priority order. WooCommerce legacy aliases are included so
+    // the function works even when WC hasn't registered the canonical names yet.
+    $priority = [
+        'woocommerce_single',
+        'shop_single',
+        'large',
+    ];
+
+    // Build a lookup of all resolved dimensions for the selected sizes.
+    $resolved = [];
+    foreach ( $selected as $name ) {
+        $dim = wp_sir_get_size_dimensions( $name, $size_options );
+        if ( ! empty( $dim['width'] ) && ! empty( $dim['height'] ) ) {
+            $resolved[ $name ] = $dim;
+        }
+    }
+
+    // Walk the priority list first.
+    foreach ( $priority as $name ) {
+        if ( isset( $resolved[ $name ] ) ) {
+            return apply_filters( 'wp_sir_original_pad_target_size', $resolved[ $name ], $name );
+        }
+    }
+
+    // Fall back to the first selected size that has valid dimensions.
+    foreach ( $resolved as $name => $dim ) {
+        return apply_filters( 'wp_sir_original_pad_target_size', $dim, $name );
+    }
+
+    return null;
 }

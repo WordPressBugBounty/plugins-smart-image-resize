@@ -4,7 +4,7 @@ namespace WP_Smart_Image_Resize;
 
 use ActionScheduler_Store;
 use WP_Smart_Image_Resize\Background_Process_On_Post_Save;
-use WP_Smart_Image_Resize\Quota;
+use WP_Smart_Image_Resize\Process_Tracker;
 use WP_Smart_Image_Resize\Utilities\Env;
 use \Imagick;
 
@@ -60,6 +60,20 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             // Initialise settings form.
             add_action('admin_init', [$this, 'init_settings']);
 
+            // Restore original image from backup (single image — media library).
+            add_action('wp_ajax_wp_sir_restore_original',    [$this, 'ajax_restore_original']);
+
+            // Bulk restore — all processed images, replaces the old split restore actions.
+            add_action('wp_ajax_wp_sir_bulk_restore_status', [$this, 'ajax_bulk_restore_status']);
+            add_action('wp_ajax_wp_sir_bulk_restore_batch',  [$this, 'ajax_bulk_restore_batch']);
+
+            // Media library: row action (list view) + attachment fields (grid view).
+            add_filter('media_row_actions',   [$this, 'media_row_restore_action'], 10, 2);
+            add_filter('attachment_fields_to_edit', [$this, 'attachment_field_restore_action'], 10, 2);
+
+            // Inline JS for the grid-view restore button.
+            add_action('admin_footer', [$this, 'print_restore_original_js']);
+
             // Add settings help tab.
             add_action('load-woocommerce_smart-image-resize', [$this, 'settings_help'], 5, 3);
 
@@ -109,7 +123,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 add_settings_error(
                     WP_SIR_NAME,
                     'settings_updated',
-                    'Settings saved successfully. To apply these changes to existing images, <a href="' . esc_url( $bulk_url ) . '">run Bulk Regenerate</a>.',
+                    'Settings saved successfully. To apply these changes to existing images, <a href="' . esc_url( $bulk_url ) . '">run Bulk Resize</a>.',
                     'updated'
                 );
             }
@@ -162,7 +176,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         
 
         function quota_exceeding_soon() {
-            if (Quota::is_exceeding_soon()) { ?>
+            if (Process_Tracker::is_nearing_limit()) { ?>
                 <div class="notice notice-warning is-dismissible">
                     <p><?php esc_html_e(
                             'Smart Image Resize: Your are reaching your limit for re-sizing images.',
@@ -179,7 +193,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         }
 
         function quota_exceeded_notice() {
-            if (Quota::isExceeded()) { ?>
+            if (Process_Tracker::has_reached_limit()) { ?>
                 <div class="notice notice-error is-dismissible">
                     <p><?php esc_html_e(
                             'Smart Image Resize: Your have reached your limit for re-sizing images.',
@@ -212,7 +226,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
         function plugin_links($links) {
 
-            $settings_url    = admin_url('admin.php?page=wp-smart-image-resize');
+            $settings_url    = admin_url('admin.php?page=wp-smart-image-resize&tab=general');
             $settings_anchor = '<a href="' . $settings_url . '">' . __('Settings') . '</a>';
             array_unshift($links, $settings_anchor);
 
@@ -249,6 +263,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
                 'watermark_offset' => ['x' => 0, 'y' => 0],
                 'crop_mode' => 'pad',
                 'disable_upscale' => 0,
+                'process_original' => 0,
                 'processable_images' => ['post_types' => [], 'taxonomies' => []],
                 'size_options' => [],
             ];
@@ -260,6 +275,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             $newval['enable_trim'] = !empty($newval['enable_trim']) ? 1 : 0;
             $newval['enable_watermark'] = !empty($newval['enable_watermark']) ? 1 : 0;
             $newval['disable_upscale'] = !empty($newval['disable_upscale']) ? 1 : 0;
+            $newval['process_original'] = !empty($newval['process_original']) ? 1 : 0;
 
             // Sanitize color field
             if (isset($newval['bg_color'])) {
@@ -429,6 +445,432 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         }
 
         /**
+         * AJAX: return IDs of all images that have been processed by the plugin.
+         * Used to populate the bulk restore UI on page load.
+         */
+        public function ajax_bulk_restore_status() {
+            check_ajax_referer( 'wp_sir_bulk_restore', 'nonce' );
+
+            if ( ! current_user_can( 'upload_files' ) ) {
+                wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wp-smart-image-resize' ) ], 403 );
+            }
+
+            global $wpdb;
+
+            $ids = $wpdb->get_col(
+                "SELECT post_id FROM {$wpdb->postmeta}
+                 WHERE meta_key = '_processed_at' AND meta_value != ''
+                 ORDER BY post_id ASC"
+            );
+
+            $ids = array_map( 'intval', array_filter( $ids ) );
+
+            wp_send_json_success( [ 'total' => count( $ids ), 'ids' => array_values( $ids ) ] );
+        }
+
+        /**
+         * AJAX: restore a batch of images to their pre-plugin state.
+         *
+         * For each image:
+         *   1. If a file backup exists → restore the original file from backup.
+         *   2. Regenerate thumbnails with the plugin bypassed (runtime filter).
+         *   3. Delete plugin meta so the image is treated as unprocessed.
+         *
+         * Expects `ids` (JSON array of attachment IDs) in POST.
+         */
+        public function ajax_bulk_restore_batch() {
+            check_ajax_referer( 'wp_sir_bulk_restore', 'nonce' );
+
+            if ( ! current_user_can( 'upload_files' ) ) {
+                wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wp-smart-image-resize' ) ], 403 );
+            }
+
+            $ids = json_decode( stripslashes( $_POST['ids'] ?? '[]' ), true );
+            if ( ! is_array( $ids ) || empty( $ids ) ) {
+                wp_send_json_error( [ 'message' => __( 'No IDs provided.', 'wp-smart-image-resize' ) ] );
+            }
+
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+
+            $backup  = new \WP_Smart_Image_Resize\Utilities\Backup();
+            $results = [ 'restored' => [], 'errors' => [] ];
+
+            // Runtime filter: makes the plugin a no-op for the duration of
+            // wp_generate_attachment_metadata() without touching the DB option.
+            $bypass = function ( $settings ) {
+                $settings['enable'] = 0;
+                return $settings;
+            };
+
+            foreach ( $ids as $attachment_id ) {
+                $attachment_id = absint( $attachment_id );
+                $file          = get_attached_file( $attachment_id );
+
+                // For PNG→JPG converted images, the backup is stored under the
+                // original .png path. Check for the pre-conversion meta.
+                $pre_conversion_relative = get_post_meta( $attachment_id, '_sir_pre_conversion_file', true );
+                if ( $pre_conversion_relative ) {
+                    $uploads_dir         = trailingslashit( wp_get_upload_dir()['basedir'] );
+                    $pre_conversion_file = $uploads_dir . $pre_conversion_relative;
+                    if ( $backup->exists( $pre_conversion_file ) ) {
+                        $file = $pre_conversion_file;
+                    }
+                }
+
+                if ( ! $file || ! is_readable( $file ) ) {
+                    // If the file isn't readable yet, the backup might restore it.
+                    if ( ! $backup->exists( $file ) ) {
+                        $results['errors'][] = [
+                            'id'     => $attachment_id,
+                            'reason' => __( 'File not found or not readable.', 'wp-smart-image-resize' ),
+                        ];
+                        continue;
+                    }
+                }
+
+                try {
+                    @set_time_limit( 60 );
+
+                    // 0. Delete old thumbnails (including WebP and converted variants).
+                    $this->cleanup_thumbnails( $attachment_id );
+
+                    // 1. Restore original file from backup if one exists.
+                    if ( $backup->exists( $file ) ) {
+                        $backup->restore( $file );
+                        // If this was a converted file, reset the attached file path.
+                        if ( $pre_conversion_relative ) {
+                            update_attached_file( $attachment_id, $pre_conversion_relative );
+                            // Remove the .jpg if it's different from the restored .png.
+                            $old_file = get_attached_file( $attachment_id );
+                            if ( $old_file !== $file && file_exists( $old_file ) ) {
+                                @unlink( $old_file );
+                            }
+                        }
+                    }
+
+                    // 2. Regenerate thumbnails with the plugin disabled.
+                    $regenerate_file = get_attached_file( $attachment_id );
+                    add_filter( 'wp_sir_settings', $bypass, PHP_INT_MAX );
+                    $meta = wp_generate_attachment_metadata( $attachment_id, $regenerate_file );
+                    remove_filter( 'wp_sir_settings', $bypass, PHP_INT_MAX );
+
+                    if ( ! empty( $meta ) && is_array( $meta ) ) {
+                        wp_update_attachment_metadata( $attachment_id, $meta );
+                    }
+
+                    // 3. Clear plugin meta so the image is treated as unprocessed.
+                    delete_post_meta( $attachment_id, '_processed_at' );
+                    delete_post_meta( $attachment_id, '_processed_by' );
+                    delete_post_meta( $attachment_id, '_old_image_meta' );
+                    delete_post_meta( $attachment_id, '_sir_pre_conversion_file' );
+
+                    
+                    \WP_Smart_Image_Resize\Process_Tracker::unrecord( $attachment_id );
+                    
+
+                    $results['restored'][] = $attachment_id;
+
+                } catch ( \Exception $e ) {
+                    // Make sure the bypass filter is removed even on failure.
+                    remove_filter( 'wp_sir_settings', $bypass, PHP_INT_MAX );
+                    $results['errors'][] = [ 'id' => $attachment_id, 'reason' => $e->getMessage() ];
+                }
+            }
+
+            wp_send_json_success( $results );
+        }
+
+        /**
+         * AJAX: restore the original image from its backup.
+         */
+        public function ajax_restore_original() {
+            // Support both POST (grid-view button sends 'nonce') and GET
+            // (list-view row action sends '_wpnonce' via wp_nonce_url).
+            if ( ! empty( $_REQUEST['nonce'] ) ) {
+                check_ajax_referer( 'wp_sir_restore_original', 'nonce' );
+            } else {
+                check_ajax_referer( 'wp_sir_restore_original' );
+            }
+
+            if ( ! current_user_can( 'upload_files' ) ) {
+                wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wp-smart-image-resize' ) ], 403 );
+            }
+
+            $attachment_id = absint( $_REQUEST['attachment_id'] ?? 0 );
+            if ( ! $attachment_id ) {
+                wp_send_json_error( [ 'message' => __( 'Invalid attachment.', 'wp-smart-image-resize' ) ] );
+            }
+
+            $file   = get_attached_file( $attachment_id );
+            $backup = new \WP_Smart_Image_Resize\Utilities\Backup();
+
+            // For PNG→JPG converted images, the backup is under the original .png path.
+            $pre_conversion_relative = get_post_meta( $attachment_id, '_sir_pre_conversion_file', true );
+            if ( $pre_conversion_relative && ! $backup->exists( $file ) ) {
+                $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
+                $pre_conversion_file = $uploads_dir . $pre_conversion_relative;
+                if ( $backup->exists( $pre_conversion_file ) ) {
+                    $file = $pre_conversion_file;
+                }
+            }
+
+            if ( ! $backup->exists( $file ) ) {
+                wp_send_json_error( [ 'message' => __( 'No backup found for this image.', 'wp-smart-image-resize' ) ] );
+            }
+
+            try {
+                // Delete old thumbnails before restoring.
+                $this->cleanup_thumbnails( $attachment_id );
+
+                $backup->restore( $file );
+
+                // If this was a PNG→JPG conversion, reset the attached file path.
+                if ( $pre_conversion_relative ) {
+                    $current_file = get_attached_file( $attachment_id );
+                    if ( $current_file !== $file && file_exists( $current_file ) ) {
+                        @unlink( $current_file );
+                    }
+                    update_attached_file( $attachment_id, $pre_conversion_relative );
+                    $file = get_attached_file( $attachment_id );
+                }
+
+                // Regenerate metadata with the plugin disabled so it doesn't re-process.
+                require_once ABSPATH . 'wp-admin/includes/image.php';
+                $bypass = function ( $settings ) {
+                    $settings['enable'] = 0;
+                    return $settings;
+                };
+                add_filter( 'wp_sir_settings', $bypass, PHP_INT_MAX );
+                $meta = wp_generate_attachment_metadata( $attachment_id, $file );
+                remove_filter( 'wp_sir_settings', $bypass, PHP_INT_MAX );
+
+                if ( ! empty( $meta ) ) {
+                    wp_update_attachment_metadata( $attachment_id, $meta );
+                }
+
+                // Clear plugin meta.
+                delete_post_meta( $attachment_id, '_processed_at' );
+                delete_post_meta( $attachment_id, '_processed_by' );
+                delete_post_meta( $attachment_id, '_old_image_meta' );
+                delete_post_meta( $attachment_id, '_sir_pre_conversion_file' );
+
+                
+                \WP_Smart_Image_Resize\Process_Tracker::unrecord( $attachment_id );
+                
+
+                wp_send_json_success( [ 'message' => __( 'Original image restored successfully.', 'wp-smart-image-resize' ) ] );
+            } catch ( \Exception $e ) {
+                wp_send_json_error( [ 'message' => $e->getMessage() ] );
+            }
+        }
+
+        /**
+         * Delete all thumbnail files for an attachment, including WebP and
+         * PNG→JPG converted variants. Does NOT delete the original/full file.
+         *
+         * @param int $attachment_id
+         */
+        private function cleanup_thumbnails( $attachment_id ) {
+            $meta = wp_get_attachment_metadata( $attachment_id );
+            if ( empty( $meta ) || empty( $meta['file'] ) ) {
+                return;
+            }
+
+            $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
+            $image_dir   = $uploads_dir . trailingslashit( dirname( $meta['file'] ) );
+            $original    = wp_basename( $meta['file'] );
+
+            // Collect all thumbnail filenames from metadata.
+            $files_to_delete = [];
+            if ( ! empty( $meta['sizes'] ) ) {
+                foreach ( $meta['sizes'] as $size_data ) {
+                    if ( ! empty( $size_data['file'] ) && $size_data['file'] !== $original ) {
+                        $files_to_delete[] = $size_data['file'];
+                    }
+                }
+            }
+
+            // Also check _old_image_meta for previously generated thumbnails.
+            $old_meta = get_post_meta( $attachment_id, '_old_image_meta', true );
+            if ( is_array( $old_meta ) && ! empty( $old_meta['sizes'] ) ) {
+                foreach ( $old_meta['sizes'] as $size_data ) {
+                    if ( ! empty( $size_data['file'] ) && $size_data['file'] !== $original ) {
+                        $files_to_delete[] = $size_data['file'];
+                    }
+                }
+            }
+
+            $files_to_delete = array_unique( $files_to_delete );
+
+            foreach ( $files_to_delete as $file ) {
+                $full_path = $image_dir . $file;
+
+                // Delete the thumbnail.
+                if ( file_exists( $full_path ) ) {
+                    @unlink( $full_path );
+                }
+
+                // Delete WebP variant.
+                $webp_path = $image_dir . pathinfo( $file, PATHINFO_FILENAME ) . '.webp';
+                if ( file_exists( $webp_path ) && wp_basename( $webp_path ) !== $original ) {
+                    @unlink( $webp_path );
+                }
+            }
+
+            // Delete full-size WebP copy.
+            $original_webp = $image_dir . pathinfo( $original, PATHINFO_FILENAME ) . '.webp';
+            if ( file_exists( $original_webp ) && wp_basename( $original_webp ) !== $original ) {
+                @unlink( $original_webp );
+            }
+        }
+
+        /**
+         * Add a "Restore Original" row action in the media library list view.
+         * Only shown when a backup exists for the attachment.
+         */
+        public function media_row_restore_action( $actions, $post ) {
+            if ( ! current_user_can( 'upload_files' ) ) {
+                return $actions;
+            }
+
+            $file   = get_attached_file( $post->ID );
+            $backup = new \WP_Smart_Image_Resize\Utilities\Backup();
+
+            // Also check the pre-conversion path for PNG→JPG converted images.
+            $has_backup = $backup->exists( $file );
+            if ( ! $has_backup ) {
+                $pre_conversion = get_post_meta( $post->ID, '_sir_pre_conversion_file', true );
+                if ( $pre_conversion ) {
+                    $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
+                    $has_backup  = $backup->exists( $uploads_dir . $pre_conversion );
+                }
+            }
+
+            if ( ! $has_backup ) {
+                return $actions;
+            }
+
+            $url = wp_nonce_url(
+                add_query_arg( [
+                    'action'        => 'wp_sir_restore_original',
+                    'attachment_id' => $post->ID,
+                ], admin_url( 'admin-ajax.php' ) ),
+                'wp_sir_restore_original'
+            );
+
+            $actions['wp_sir_restore'] = sprintf(
+                '<a href="%s" class="wp-sir-restore-original" data-id="%d" aria-label="%s">%s</a>',
+                esc_url( $url ),
+                esc_attr( $post->ID ),
+                esc_attr__( 'Restore original image', 'wp-smart-image-resize' ),
+                esc_html__( 'Restore Original', 'wp-smart-image-resize' )
+            );
+
+            return $actions;
+        }
+
+        /**
+         * Add a "Restore Original" button in the media library grid/attachment modal.
+         * Only shown when a backup exists for the attachment.
+         */
+        public function attachment_field_restore_action( $form_fields, $post ) {
+            if ( ! current_user_can( 'upload_files' ) ) {
+                return $form_fields;
+            }
+
+            $file   = get_attached_file( $post->ID );
+            $backup = new \WP_Smart_Image_Resize\Utilities\Backup();
+
+            // Also check the pre-conversion path for PNG→JPG converted images.
+            $has_backup = $backup->exists( $file );
+            if ( ! $has_backup ) {
+                $pre_conversion = get_post_meta( $post->ID, '_sir_pre_conversion_file', true );
+                if ( $pre_conversion ) {
+                    $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
+                    $has_backup  = $backup->exists( $uploads_dir . $pre_conversion );
+                }
+            }
+
+            if ( ! $has_backup ) {
+                return $form_fields;
+            }
+
+            $nonce = wp_create_nonce( 'wp_sir_restore_original' );
+
+            $form_fields['wp_sir_restore'] = [
+                'label' => __( 'Smart Image Resize', 'wp-smart-image-resize' ),
+                'input' => 'html',
+                'html'  => sprintf(
+                    '<button type="button" class="button wp-sir-restore-original-btn" data-id="%d" data-nonce="%s">%s</button>
+                     <span class="wp-sir-restore-msg" style="margin-left:8px;display:none"></span>',
+                    esc_attr( $post->ID ),
+                    esc_attr( $nonce ),
+                    esc_html__( 'Restore Original Image', 'wp-smart-image-resize' )
+                ),
+            ];
+
+            return $form_fields;
+        }
+
+        /**
+         * Print inline JS for the grid-view "Restore Original" button.
+         * Only outputs on media library screens.
+         */
+        public function print_restore_original_js() {
+            $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+            if ( ! $screen || ! in_array( $screen->id, [ 'upload', 'media' ], true ) ) {
+                return;
+            }
+            ?>
+            <script>
+            (function($){
+                // Grid view / attachment modal button.
+                $(document).on('click', '.wp-sir-restore-original-btn', function(){
+                    var $btn  = $(this);
+                    var $msg  = $btn.siblings('.wp-sir-restore-msg');
+                    var id    = $btn.data('id');
+                    var nonce = $btn.data('nonce');
+
+                    $btn.prop('disabled', true).text('<?php echo esc_js( __( 'Restoring…', 'wp-smart-image-resize' ) ); ?>');
+                    $msg.hide();
+
+                    $.post(ajaxurl, {
+                        action: 'wp_sir_restore_original',
+                        attachment_id: id,
+                        nonce: nonce
+                    }, function(res){
+                        if (res.success) {
+                            $msg.css('color','green').text(res.data.message).show();
+                            $btn.text('<?php echo esc_js( __( 'Restored', 'wp-smart-image-resize' ) ); ?>');
+                        } else {
+                            $msg.css('color','red').text(res.data.message).show();
+                            $btn.prop('disabled', false).text('<?php echo esc_js( __( 'Restore Original Image', 'wp-smart-image-resize' ) ); ?>');
+                        }
+                    });
+                });
+
+                // List view row action link — use direct URL but intercept for feedback.
+                $(document).on('click', 'a.wp-sir-restore-original', function(e){
+                    e.preventDefault();
+                    var $link = $(this);
+                    var href  = $link.attr('href');
+
+                    $link.text('<?php echo esc_js( __( 'Restoring…', 'wp-smart-image-resize' ) ); ?>');
+
+                    $.get(href, function(res){
+                        if (res.success) {
+                            $link.text('<?php echo esc_js( __( 'Restored', 'wp-smart-image-resize' ) ); ?>');
+                        } else {
+                            $link.text('<?php echo esc_js( __( 'Error — try again', 'wp-smart-image-resize' ) ); ?>');
+                        }
+                    });
+                });
+            }(jQuery));
+            </script>
+            <?php
+        }
+
+        /**
          * Initialize settings form.
          *
          * We keep register_setting() so WordPress handles sanitization and saving
@@ -438,7 +880,6 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
          * @return void
          */
         public function init_settings() {
-
             register_setting(WP_SIR_NAME, 'wp_sir_settings', [
                 'sanitize_callback' => [$this, 'pre_update_settings'],
                 'default' => _wp_sir_get_default_settings(),
@@ -664,43 +1105,66 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         <?php
         }
 
-        function settings_field_jpg_convert() {
+        function settings_field_process_original() {
             $settings = \wp_sir_get_settings(); ?>
-            <label class="wp-sir-toggle-row" for="wp-sir-jpg-convert">
+            <label class="wp-sir-toggle-row" for="wp-sir-pad-original">
                 <input type="checkbox"
-                       name="wp_sir_settings[jpg_convert]"
-                       <?php checked( $settings['jpg_convert'], 1 ); ?>
-                       id="wp-sir-jpg-convert"
+                       name="wp_sir_settings[process_original]"
+                       <?php checked( $settings['process_original'], 1 ); ?>
+                       id="wp-sir-pad-original"
                        class="wp-sir-as-toggle"
-                        disabled 
                        value="1" />
                 <span class="wp-sir-toggle-row__desc">
-                    <?php esc_html_e( 'Convert PNG images to JPG for smaller file sizes. Only use this if your images do not need transparency.', 'wp-smart-image-resize' ); ?>
-                    
-                    <a href="https://sirplugin.com/#pricing?utm_source=wp&utm_medium=plugin&utm_campaign=png2jpg" target="_blank" class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></a>
-                    
+                    <?php esc_html_e( 'Resize the original image so it matches the same aspect ratio as your thumbnails. The original is backed up and can be restored at any time.', 'wp-smart-image-resize' ); ?>
                 </span>
             </label>
         <?php
         }
 
+        function settings_field_jpg_convert() {            $settings = \wp_sir_get_settings(); ?>
+            
+            
+            <div class="wp-sir-pro-feature-row">
+                <label class="wp-sir-toggle-row wp-sir-toggle-row--disabled" for="wp-sir-jpg-convert">
+                    <input type="checkbox"
+                           id="wp-sir-jpg-convert"
+                           class="wp-sir-as-toggle"
+                           disabled
+                           value="1" />
+                    <span class="wp-sir-toggle-row__desc">
+                        <?php esc_html_e( 'Convert PNG images to JPG for smaller file sizes. Reduces file size by up to 70%.', 'wp-smart-image-resize' ); ?>
+                    </span>
+                </label>
+                <a href="https://sirplugin.com/#pricing?utm_source=wp&amp;utm_medium=plugin&amp;utm_campaign=png2jpg" target="_blank" class="wp-sir-pro-feature-link">
+                    <span class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></span>
+                    <?php esc_html_e( 'Upgrade to unlock', 'wp-smart-image-resize' ); ?> →
+                </a>
+            </div>
+            
+        <?php
+        }
+
         function settings_field_enable_nextgen_format() {
             $settings = \wp_sir_get_settings(); ?>
-            <label class="wp-sir-toggle-row" for="wp-sir-enable-webp">
-                <input type="checkbox"
-                       name="wp_sir_settings[enable_webp]"
-                       <?php checked( $settings['enable_webp'], 1 ); ?>
-                       id="wp-sir-enable-webp"
-                       class="wp-sir-as-toggle"
-                        disabled 
-                       value="1" />
-                <span class="wp-sir-toggle-row__desc">
-                    <?php esc_html_e( 'Serve images in WebP format — up to 90% smaller than PNG. Falls back to JPG/PNG for older browsers automatically.', 'wp-smart-image-resize' ); ?>
-                    
-                    <a href="https://sirplugin.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=webp" target="_blank" class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></a>
-                    
-                </span>
-            </label>
+            
+            
+            <div class="wp-sir-pro-feature-row">
+                <label class="wp-sir-toggle-row wp-sir-toggle-row--disabled" for="wp-sir-enable-webp">
+                    <input type="checkbox"
+                           id="wp-sir-enable-webp"
+                           class="wp-sir-as-toggle"
+                           disabled
+                           value="1" />
+                    <span class="wp-sir-toggle-row__desc">
+                        <?php esc_html_e( 'Serve images in WebP format — up to 90% smaller than PNG. Faster page loads, better Core Web Vitals.', 'wp-smart-image-resize' ); ?>
+                    </span>
+                </label>
+                <a href="https://sirplugin.com/?utm_source=wordpress&amp;utm_medium=plugin&amp;utm_campaign=webp" target="_blank" class="wp-sir-pro-feature-link">
+                    <span class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></span>
+                    <?php esc_html_e( 'Upgrade to unlock', 'wp-smart-image-resize' ); ?> →
+                </a>
+            </div>
+            
         <?php
         }
 
@@ -927,7 +1391,7 @@ We automatically serve the best format to ensure optimal performance.
             </label>
             <?php
             
-            echo Quota::show_quota_status();
+            echo Process_Tracker::render_status();
             
             ?>
 <?php
@@ -1073,9 +1537,55 @@ We automatically serve the best format to ensure optimal performance.
                     </p>
                 </div>
 
+                <div class="wp-sir-help-section" id="wp-sir-reset-section">
+                    <h2><?php esc_html_e( 'Restore Original Images', 'wp-smart-image-resize' ); ?></h2>
+                    <p class="description">
+                        <?php esc_html_e( 'Restore all images to their original state before the plugin processed them. Use this if you plan to stop using the plugin or want to start fresh. Original files will be recovered from backup (if available) and thumbnails regenerated using WordPress defaults.', 'wp-smart-image-resize' ); ?>
+                    </p>
+
+                    <div id="wp-sir-reset-state-idle">
+                        <button type="button" class="button button-secondary" id="wp-sir-reset-start" disabled>
+                            <?php esc_html_e( 'Restore All Images', 'wp-smart-image-resize' ); ?>
+                        </button>
+                        <span id="wp-sir-reset-count" style="margin-left:8px;color:#8c8f94;font-size:12px">
+                            <?php esc_html_e( 'Checking…', 'wp-smart-image-resize' ); ?>
+                        </span>
+                    </div>
+
+                    <div id="wp-sir-reset-state-running" style="display:none;margin-top:14px;max-width:480px">
+                        <div class="wp-sir-bulk-progress-header">
+                            <span style="font-size:13px"><?php esc_html_e( 'Restoring…', 'wp-smart-image-resize' ); ?></span>
+                            <span class="wp-sir-bulk-counts">
+                                <span id="wp-sir-reset-done">0</span>
+                                <span class="wp-sir-bulk-counts__sep">/</span>
+                                <span id="wp-sir-reset-total">0</span>
+                                <?php esc_html_e( 'images', 'wp-smart-image-resize' ); ?>
+                            </span>
+                        </div>
+                        <div class="wp-sir-bulk-progress-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="wp-sir-reset-progress-wrap">
+                            <div class="wp-sir-bulk-progress-bar" id="wp-sir-reset-progress-bar"></div>
+                        </div>
+                        <p class="wp-sir-bulk-percent" id="wp-sir-reset-percent">0%</p>
+                        <button type="button" class="button button-link-delete" id="wp-sir-reset-stop" style="margin-top:8px">
+                            <?php esc_html_e( 'Stop', 'wp-smart-image-resize' ); ?>
+                        </button>
+                    </div>
+
+                    <div id="wp-sir-reset-state-done" style="display:none;margin-top:10px">
+                        <span style="color:green">
+                            <span class="dashicons dashicons-yes-alt" style="vertical-align:middle;font-size:16px"></span>
+                            <span id="wp-sir-reset-summary"></span>
+                        </span>
+                    </div>
+
+                    <div id="wp-sir-reset-errors" style="display:none;margin-top:10px">
+                        <strong style="color:#b32d2e;font-size:13px"><?php esc_html_e( 'Some images could not be restored:', 'wp-smart-image-resize' ); ?></strong>
+                        <ul id="wp-sir-reset-error-list" style="margin-top:4px;color:#b32d2e;font-size:12px"></ul>
+                    </div>
+                </div>
+
                 <div class="wp-sir-help-section">
-                    <h2><?php esc_html_e('Image Processing', 'wp-smart-image-resize'); ?></h2>
-                    <?php if ($image_processors['gd']['available'] || $image_processors['imagick']['available']) : ?>
+                    <h2><?php esc_html_e('Image Processing', 'wp-smart-image-resize'); ?></h2>                    <?php if ($image_processors['gd']['available'] || $image_processors['imagick']['available']) : ?>
                         <div class="wp-sir-processor-switch">
                             <label>
                                 <select name="wp_sir_image_processor" id="wp-sir-processor-select">

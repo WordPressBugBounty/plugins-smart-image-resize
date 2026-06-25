@@ -24,6 +24,15 @@ class File
 
     public static function rrmdir($directory)
     {
+        // Validate directory is within the WordPress uploads directory.
+        $uploads_dir     = wp_get_upload_dir()['basedir'];
+        $real_directory  = realpath($directory);
+        $real_uploads    = realpath($uploads_dir);
+
+        if ( ! $real_directory || ! $real_uploads || strpos($real_directory, $real_uploads) !== 0 ) {
+            return false;
+        }
+
         foreach (new \DirectoryIterator($directory) as $f) {
             if ($f->isDot()) {
                 continue;

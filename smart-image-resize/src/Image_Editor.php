@@ -8,6 +8,8 @@ use WP_Smart_Image_Resize\Image_Filters\Thumbnail_Filter;
 use WP_Smart_Image_Resize\Image_Filters\Trim_Filter;
 use WP_Smart_Image_Resize\Image_Filters\CreateWebP_Filter;
 use WP_Smart_Image_Resize\Image_Filters\Watermark_Filter;
+use WP_Smart_Image_Resize\Image_Filters\Pad_Original_Filter;
+use WP_Smart_Image_Resize\Utilities\Backup;
 use WP_Smart_Image_Resize\Utilities\File;
 
 /*
@@ -166,7 +168,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 }
 
                 
-                if (Quota::isExceeded()) {
+                if (Process_Tracker::has_reached_limit()) {
                     return $metadata;
                 }
                 
@@ -180,6 +182,54 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 // By default, the plugin does only process specified images.
                 if (!$this->isProcessable($imageId, $imageMeta)) {
                     return $metadata;
+                }
+
+                // ------------------------------------------------------------------
+                // If this image was previously processed, restore the original from
+                // backup before re-processing. This prevents compression stacking,
+                // double watermarks, and trimming artifacts from accumulating.
+                // Also cleans up old WebP and converted files from the previous run.
+                // ------------------------------------------------------------------
+                $backup = new Backup();
+                $original_file = $imageMeta->getOriginalFullPath();
+
+                // If PNG→JPG conversion was previously applied, _wp_attached_file
+                // points to the .jpg. The backup was created from the original .png.
+                // Check for the stored pre-conversion path to find the correct backup.
+                $pre_conversion_relative = get_post_meta( $imageId, '_sir_pre_conversion_file', true );
+                if ( $pre_conversion_relative ) {
+                    $uploads_dir         = trailingslashit( wp_get_upload_dir()['basedir'] );
+                    $pre_conversion_file = $uploads_dir . $pre_conversion_relative;
+                    if ( $backup->exists( $pre_conversion_file ) ) {
+                        $original_file = $pre_conversion_file;
+                    }
+                }
+
+                if ( get_post_meta( $imageId, '_processed_at', true ) && $backup->exists( $original_file ) ) {
+                    // Clean up old thumbnails (including WebP and PNG→JPG variants).
+                    $this->cleanup_old_files( $imageId, $metadata );
+
+                    // If PNG→JPG was previously applied, delete the .jpg file before
+                    // restoring the .png from backup.
+                    if ( $pre_conversion_relative ) {
+                        $current_jpg = get_attached_file( $imageId );
+                        if ( $current_jpg !== $original_file && file_exists( $current_jpg ) ) {
+                            @unlink( $current_jpg );
+                        }
+                    }
+
+                    // Restore the original file from backup (copies backup over current).
+                    // Note: Backup::restore() deletes the backup after copying.
+                    // We re-create it later during processing, so this is fine.
+                    $backup->restore( $original_file );
+
+                    // If PNG→JPG was previously applied, reset the attached file to .png.
+                    if ( $pre_conversion_relative ) {
+                        update_attached_file( $imageId, $pre_conversion_relative );
+                        // Re-read imageMeta with the corrected path.
+                        $imageMeta = new Image_Meta( $imageId, $metadata );
+                        delete_post_meta( $imageId, '_sir_pre_conversion_file' );
+                    }
                 }
 
                 // TODO: Use WP_Image_Editor class instead.
@@ -198,17 +248,126 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 @set_time_limit(0);
 
                 $imageMeta->setMimeType($image->mime());
+
+                // ------------------------------------------------------------------
+                // ------------------------------------------------------------------
+                // The original is NOT padded before trimming — trimming happens
+                // first so each image is measured from its actual content.
+                // Padding is applied after trim to achieve the target aspect ratio
+                // for the ORIGINAL FILE ONLY. Thumbnails use the trimmed image.
+                // ------------------------------------------------------------------
                 
-                $_untrimmed_image = null;
+                // Keep a reference to the pre-trim image for:
+                // 1. Saving the original when process_original is off (don't trim the file on disk)
+                // 2. Generating thumbnails excluded from trimming
+                $_pretrim_image = clone $image;
                 
                 $exclude_trim_sizes = (array)apply_filters('wp_sir_exclude_trim_sizes', [], $imageId);
-
-                if( !empty( $exclude_trim_sizes ) ){
-                    $_untrimmed_image = clone $image;
-                }
+                $_untrimmed_image = ! empty( $exclude_trim_sizes ) ? $_pretrim_image : null;
                 
                 $image->filter(new Trim_Filter($imageMeta));
 
+                // $image is now the trimmed version — used for ALL thumbnail generation.
+
+                // ------------------------------------------------------------------
+                // Pad the original image to the target aspect ratio AFTER trimming.
+                // This only affects the saved original file, NOT thumbnails.
+                // Controlled by the `process_original` setting (uniformity features).
+                // ------------------------------------------------------------------
+                $padded_original = null;
+                if ( ! empty( $settings['process_original'] ) ) {
+                    $original_path      = $imageMeta->getOriginalFullPath();
+                    $pad_target_size    = _wp_sir_get_original_pad_target_size();
+                    $pad_filter         = new Pad_Original_Filter( $pad_target_size );
+                    $padded_original    = $pad_filter->applyFilter( clone $image );
+
+                    $pad_w = $padded_original->getWidth();
+                    $pad_h = $padded_original->getHeight();
+
+                    $imageMeta->setMetaItem( 'width',  $pad_w );
+                    $imageMeta->setMetaItem( 'height', $pad_h );
+                    $imageMeta->setSizeData( 'full', [
+                        'file'      => wp_basename( $original_path ),
+                        'width'     => $pad_w,
+                        'height'    => $pad_h,
+                        'mime-type' => $image->mime(),
+                    ] );
+                }
+
+                // ------------------------------------------------------------------
+                // Determine whether tools (watermark, PNG→JPG, WebP, compression)
+                // should be applied to the original/full-size image.
+                //
+                // By default this is ON — users expect these features to apply to
+                // all images. Developers can disable via experimental filter:
+                //   add_filter('wp_sir_experimental/apply_tools_to_original', '__return_false');
+                // ------------------------------------------------------------------
+                $apply_tools_to_original = (bool) apply_filters(
+                    'wp_sir_experimental/apply_tools_to_original',
+                    true,
+                    $imageId,
+                    $settings
+                );
+
+                $has_compression  = ! empty( $settings['jpg_quality'] ) && (int) $settings['jpg_quality'] > 0;
+                $has_watermark    = ! empty( $settings['enable_watermark'] );
+                $has_jpg_convert  = ! empty( $settings['jpg_convert'] );
+                $has_webp         = ! empty( $settings['enable_webp'] );
+
+                // Tools that modify the original file on disk.
+                $tools_active = $apply_tools_to_original && ( $has_compression || $has_watermark || $has_jpg_convert );
+
+                // ------------------------------------------------------------------
+                // Save the original image to disk.
+                //
+                // The original is modified when:
+                //   - process_original is ON (uniformity: padding/trimming saved to disk)
+                //   - OR tools are active (watermark, compression, PNG→JPG)
+                //   - OR WebP is enabled (need to save original to generate .webp copy)
+                //
+                // Backup is created before any destructive change.
+                // ------------------------------------------------------------------
+                $original_path    = $imageMeta->getOriginalFullPath();
+                $modify_original  = ! empty( $settings['process_original'] ) || $tools_active || $has_webp;
+
+                if ( $modify_original ) {
+                    // Use padded version if uniformity padding is on, otherwise use the
+                    // pre-trim image (original dimensions preserved on disk).
+                    $original_to_save = $padded_original
+                        ? clone $padded_original
+                        : clone $_pretrim_image;
+
+                    // Backup the original before any destructive changes.
+                    $backup = new Backup();
+                    if ( ! $backup->exists( $original_path ) ) {
+                        $backup->create( $original_path );
+                    }
+
+                    // Compression quality: only apply extra compression if tools are
+                    // enabled for the original. Otherwise save at full quality (100).
+                    $quality = ( $apply_tools_to_original && $has_compression )
+                        ? 100 - (int) $settings['jpg_quality']
+                        : 100;
+
+
+
+                    
+                    $original_to_save->save( $original_path, $quality );
+                    
+
+                    // Update metadata dimensions.
+                    $imageMeta->setMetaItem( 'width', $original_to_save->getWidth() );
+                    $imageMeta->setMetaItem( 'height', $original_to_save->getHeight() );
+
+
+                    $original_to_save->destroy();
+                }
+
+                if ( $padded_original ) {
+                    $padded_original->destroy();
+                }
+
+                $_pretrim_image->destroy();
 
                 $imageMeta->setBackup();
 
@@ -284,7 +443,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 $this->deleteOrphanThumbnails($imageId, $metadata, $new_meta);
                 
                 
-                Quota::consume($imageId);
+                Process_Tracker::record($imageId);
                 
                 return $new_meta;
             } catch (Invalid_Image_Meta_Exception $e) {
@@ -308,6 +467,58 @@ if (!class_exists('\WP_Smart_Image_Resize\Image_Editor')) :
                 }
 
                 return $metadata;
+            }
+        }
+
+        /**
+         * Clean up all generated files from a previous processing run.
+         * Called before re-processing to start fresh from the original.
+         *
+         * @param int   $imageId
+         * @param array $metadata Current attachment metadata.
+         */
+        private function cleanup_old_files( $imageId, $metadata ) {
+            if ( empty( $metadata ) || empty( $metadata['file'] ) ) {
+                return;
+            }
+
+            $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
+            $image_dir   = $uploads_dir . trailingslashit( dirname( $metadata['file'] ) );
+            $original    = wp_basename( $metadata['file'] );
+
+            // Collect thumbnail filenames.
+            $files_to_delete = [];
+            if ( ! empty( $metadata['sizes'] ) ) {
+                foreach ( $metadata['sizes'] as $size_data ) {
+                    if ( ! empty( $size_data['file'] ) && $size_data['file'] !== $original ) {
+                        $files_to_delete[] = $size_data['file'];
+                    }
+                }
+            }
+
+            // Also check _old_image_meta for previously orphaned thumbnails.
+            $old_meta = get_post_meta( $imageId, '_old_image_meta', true );
+            if ( is_array( $old_meta ) && ! empty( $old_meta['sizes'] ) ) {
+                foreach ( $old_meta['sizes'] as $size_data ) {
+                    if ( ! empty( $size_data['file'] ) && $size_data['file'] !== $original ) {
+                        $files_to_delete[] = $size_data['file'];
+                    }
+                }
+            }
+
+            $files_to_delete = array_unique( $files_to_delete );
+
+            foreach ( $files_to_delete as $file ) {
+                // Delete thumbnail.
+                @unlink( $image_dir . $file );
+                // Delete its WebP variant.
+                @unlink( $image_dir . pathinfo( $file, PATHINFO_FILENAME ) . '.webp' );
+            }
+
+            // Delete full-size WebP.
+            $original_webp = $image_dir . pathinfo( $original, PATHINFO_FILENAME ) . '.webp';
+            if ( wp_basename( $original_webp ) !== $original ) {
+                @unlink( $original_webp );
             }
         }
 

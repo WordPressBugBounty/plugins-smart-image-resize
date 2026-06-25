@@ -25,12 +25,33 @@ class Backup
             throw new Exception( "Cannot create the backup folder, check the uploads folder permissions." );
         }
 
+        // Protect backup directory from public access.
+        $this->protect_directory();
+
         if ( !copy( $file, $backupFile ) ) {
             throw new Exception( "Cannot create the backup, check your error_log file for debugging." );
         }
 
         return true;
 
+    }
+
+    /**
+     * Add .htaccess and index.php to prevent public access to backup files.
+     */
+    private function protect_directory()
+    {
+        $dir = $this->getUploadsDirectory() . self::BACKUP_DIR;
+
+        $htaccess = $dir . '/.htaccess';
+        if ( ! file_exists( $htaccess ) ) {
+            @file_put_contents( $htaccess, "Deny from all\n" );
+        }
+
+        $index = $dir . '/index.php';
+        if ( ! file_exists( $index ) ) {
+            @file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+        }
     }
 
     public function exists( $file )
@@ -83,6 +104,43 @@ class Backup
         }
 
         File::rrmdir( $this->getUploadsDirectory() . self::BACKUP_DIR );
+    }
+
+    /**
+     * Return IDs of all attachments that currently have a backup file on disk.
+     * Uses a DB query to get candidate file paths then checks filesystem existence.
+     *
+     * @return int[]
+     */
+    public function get_backed_up_attachment_ids() {
+        global $wpdb;
+
+        // Fetch all image attachment IDs and their stored file paths in one query.
+        $rows = $wpdb->get_results(
+            "SELECT p.ID, pm.meta_value AS filepath
+             FROM {$wpdb->posts} p
+             INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = '_wp_attached_file'
+             WHERE p.post_type = 'attachment'
+               AND p.post_mime_type LIKE 'image/%'
+               AND p.post_status != 'trash'",
+            ARRAY_A
+        );
+
+        if ( empty( $rows ) ) {
+            return [];
+        }
+
+        $uploads_dir = $this->getUploadsDirectory();
+        $ids         = [];
+
+        foreach ( $rows as $row ) {
+            $file = $uploads_dir . $row['filepath'];
+            if ( $this->exists( $file ) ) {
+                $ids[] = (int) $row['ID'];
+            }
+        }
+
+        return $ids;
     }
 
     private function getRelativePath( $file )

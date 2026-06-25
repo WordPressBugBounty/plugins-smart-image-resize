@@ -9,7 +9,7 @@ use WP_Smart_Image_Resize\Singleton_Trait;
  *
  * The notice is displayed on every admin screen until the user either:
  *  - dismisses it manually, or
- *  - visits the Bulk Regenerate tab (auto-dismissed).
+ *  - visits the Bulk Resize tab (auto-dismissed).
  *
  * @package WP_Smart_Image_Resize
  */
@@ -38,7 +38,7 @@ class Get_Started_Notice {
 			return false;
 		}
 
-		// No need to show on the Bulk Regenerate tab itself.
+		// No need to show on the Bulk Resize tab itself.
 		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
 		$tab  = isset( $_GET['tab'] )  ? sanitize_text_field( wp_unslash( $_GET['tab'] ) )  : '';
 		if ( $page === WP_SIR_NAME && $tab === 'bulk-regenerate' ) {
@@ -83,7 +83,7 @@ class Get_Started_Notice {
 					<?php esc_html_e( 'Smart Image Resize is ready!', 'wp-smart-image-resize' ); ?>
 				</p>
 				<p style="margin: 0 0 12px; color: #50575e;">
-					<?php esc_html_e( 'New images will be processed automatically on upload. To apply your settings to existing images in your media library, run Bulk Regenerate.', 'wp-smart-image-resize' ); ?>
+					<?php esc_html_e( 'New images will be processed automatically on upload. To apply your settings to existing images in your media library, run Bulk Resize.', 'wp-smart-image-resize' ); ?>
 				</p>
 				<p style="margin: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
 					<a href="<?php echo esc_url( $bulk_url ); ?>" class="button button-primary" style="background: #4f46e5; border-color: #4f46e5; box-shadow: 0 1px 0 #3730a3;">

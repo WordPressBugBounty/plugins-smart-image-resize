@@ -82,6 +82,7 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 			wp_localize_script( 'wp-smart-image-resize', 'wp_sir_object', [
 				'ajax_url'                 => admin_url( 'admin-ajax.php' ),
 				'nonce'                    => wp_create_nonce( 'wp-sir-ajax' ),
+				'restore_nonce'            => wp_create_nonce( 'wp_sir_bulk_restore' ),
 				'process_ml_upload_cookie' => Process_Media_Library_Upload::COOKIE_NAME,
 				'bulk' => [
 					'action_start'   => Bulk_Processor::AJAX_START,
@@ -89,6 +90,11 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 					'action_pause'   => Bulk_Processor::AJAX_PAUSE,
 					'action_reset'   => Bulk_Processor::AJAX_RESET,
 					'action_status'  => Bulk_Processor::AJAX_STATUS,
+					'action_count'   => Bulk_Processor::AJAX_COUNT,
+				],
+				'i18n' => [
+					'no_processed_images' => __( 'No processed images found', 'wp-smart-image-resize' ),
+					'restore_confirm'     => __( 'This will restore all images to their original state before the plugin processed them. This cannot be undone for images without a backup. Continue?', 'wp-smart-image-resize' ),
 				],
 			] );
 		}
@@ -170,6 +176,7 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 			include_once WP_SIR_DIR . 'src/Image_Filters/CreateWebP_Filter.php';
 			include_once WP_SIR_DIR . 'src/Image_Filters/Thumbnail_Filter.php';
 			include_once WP_SIR_DIR . 'src/Image_Filters/Recanvas_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/Pad_Original_Filter.php';
 			include_once WP_SIR_DIR . 'src/Image_Manager.php';
 			include_once WP_SIR_DIR . 'src/Utilities/Request.php';
 			include_once WP_SIR_DIR . 'src/Utilities/Env.php';
@@ -179,7 +186,7 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 			include_once WP_SIR_DIR . 'src/Processable_Trait.php';
 			include_once WP_SIR_DIR . 'src/Singleton_Trait.php';
 			include_once WP_SIR_DIR . 'src/Runtime_Config_Trait.php';
-			include_once WP_SIR_DIR . 'src/Quota.php';
+			include_once WP_SIR_DIR . 'src/Process_Tracker.php';
 			include_once WP_SIR_DIR . 'src/Events/Event_Subscriber.php';
 			include_once WP_SIR_DIR . 'src/Filters/Filter_Subscriber.php';
 			include_once WP_SIR_DIR . 'src/Image_Editor.php';
