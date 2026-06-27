@@ -11,7 +11,7 @@
  * Plugin Name: Smart Image Resize for WooCommerce
  * Plugin URI: http://wordpress.org/plugins/smart-image-resize
  * Description: Make WooCommerce products images the same size and uniform without cropping.
- * Version: 1.17.0
+ * Version: 1.17.1
  * Author: Nabil Lemsieh
  * Author URI: https://sirplugin.com
  * License: GPLv3
@@ -61,7 +61,7 @@ if (!(defined('WP_CLI') && WP_CLI) && function_exists('\is_plugin_active') && fu
 endif;
 
 
-define( 'WP_SIR_VERSION', '1.17.0' );
+define( 'WP_SIR_VERSION', '1.17.1' );
 define( 'WP_SIR_NAME', 'wp-smart-image-resize' );
 define( 'WP_SIR_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_SIR_URL', plugin_dir_url( __FILE__ ) );

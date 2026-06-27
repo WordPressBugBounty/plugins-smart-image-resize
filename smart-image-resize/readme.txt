@@ -6,7 +6,7 @@ Tested up to: 7.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 7.0
-Stable tag: 1.17.0
+Stable tag: 1.17.1
 
 Make all WooCommerce product images the same size without cropping. Automatic, no configuration required.
 
@@ -138,6 +138,10 @@ Yes. Works with Dokan, WCFM, and other multivendor setups. Vendor-uploaded image
 
 == Changelog ==
 
+= 1.17.1 =
+
+* Security hardening.
+
 = 1.17.0 =
 
 * Added support for processing original/full-size images.
@@ -235,6 +239,9 @@ Yes. Works with Dokan, WCFM, and other multivendor setups. Vendor-uploaded image
 * Performance improvements with Imagick.
 
 == Upgrade Notice ==
+
+= 1.17.1 =
+Security hardening.
 
 = 1.17.0 =
 New: Process original images, bulk-restore, and refreshed admin UI.

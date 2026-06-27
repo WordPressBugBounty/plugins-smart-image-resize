@@ -451,7 +451,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         public function ajax_bulk_restore_status() {
             check_ajax_referer( 'wp_sir_bulk_restore', 'nonce' );
 
-            if ( ! current_user_can( 'upload_files' ) ) {
+            if ( ! current_user_can( $this->get_admin_capability() ) ) {
                 wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wp-smart-image-resize' ) ], 403 );
             }
 
@@ -481,7 +481,7 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
         public function ajax_bulk_restore_batch() {
             check_ajax_referer( 'wp_sir_bulk_restore', 'nonce' );
 
-            if ( ! current_user_can( 'upload_files' ) ) {
+            if ( ! current_user_can( $this->get_admin_capability() ) ) {
                 wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wp-smart-image-resize' ) ], 403 );
             }
 
@@ -504,6 +504,15 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
 
             foreach ( $ids as $attachment_id ) {
                 $attachment_id = absint( $attachment_id );
+
+                if ( ! $attachment_id || ! current_user_can( 'edit_post', $attachment_id ) ) {
+                    $results['errors'][] = [
+                        'id'     => $attachment_id,
+                        'reason' => __( 'Permission denied for this attachment.', 'wp-smart-image-resize' ),
+                    ];
+                    continue;
+                }
+
                 $file          = get_attached_file( $attachment_id );
 
                 // For PNG→JPG converted images, the backup is stored under the
@@ -599,6 +608,10 @@ if (!class_exists('\WP_Smart_Image_Resize\Settings')) :
             $attachment_id = absint( $_REQUEST['attachment_id'] ?? 0 );
             if ( ! $attachment_id ) {
                 wp_send_json_error( [ 'message' => __( 'Invalid attachment.', 'wp-smart-image-resize' ) ] );
+            }
+
+            if ( ! current_user_can( 'edit_post', $attachment_id ) ) {
+                wp_send_json_error( [ 'message' => __( 'Permission denied for this attachment.', 'wp-smart-image-resize' ) ], 403 );
             }
 
             $file   = get_attached_file( $attachment_id );
@@ -1722,6 +1735,22 @@ We automatically serve the best format to ensure optimal performance.
             add_filter('wp_redirect', function($location) {
                 return admin_url('admin.php?page=wp-smart-image-resize&tab=bulk-regenerate');
             });
+        }
+
+        /**
+         * Return the admin-level capability required for plugin management actions.
+         *
+         * Uses `manage_woocommerce` when WooCommerce is active, otherwise
+         * falls back to `manage_options`. This mirrors the capability used
+         * for the plugin settings page.
+         *
+         * @return string
+         */
+        private function get_admin_capability() {
+            if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
+                return 'manage_woocommerce';
+            }
+            return 'manage_options';
         }
 
     }
