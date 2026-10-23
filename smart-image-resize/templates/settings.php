@@ -61,11 +61,8 @@ $settings    = wp_sir_get_settings();
 						<div class="wp-sir-card__header">
 							<span class="dashicons dashicons-images-alt2 wp-sir-card__icon" aria-hidden="true"></span>
 							<div>
-								<h3><?php esc_html_e( 'Image Uniformity', 'wp-smart-image-resize' ); ?></h3>
-								
-								
-								<span class="wp-sir-card__desc"><?php esc_html_e( 'Automatically standardize uploaded images — resize, trim, and unify colors — for a consistent look across your store.', 'wp-smart-image-resize' ); ?></span>
-								
+								<h3><?php esc_html_e( 'Auto-Resize', 'wp-smart-image-resize' ); ?></h3>
+								<span class="wp-sir-card__desc"><?php esc_html_e( 'Automatically resize uploaded images to ensure a consistent look across your store.', 'wp-smart-image-resize' ); ?></span>
 							</div>
 							<label class="wp-sir-big-toggle" for="wp-sir-enable" title="<?php esc_attr_e( 'Enable or disable image uniformity', 'wp-smart-image-resize' ); ?>">
 								<input type="checkbox"
@@ -88,15 +85,17 @@ $settings    = wp_sir_get_settings();
 								<div class="wp-sir-field__control">
 									<?php $this->settings_field_processable_images(); ?>
 								</div>
-								<?php
-								$selected_types     = (array) ( $settings['processable_images']['post_types'] ?? [] );
-								$selected_taxonomies = (array) ( $settings['processable_images']['taxonomies'] ?? [] );
-								if ( $settings['enable'] && empty( $selected_types ) && empty( $selected_taxonomies ) ) : ?>
-									<p class="wp-sir-field-warning" style="color:#d63638;margin-top:4px;font-size:12px">
-										<span class="dashicons dashicons-warning" style="font-size:14px;vertical-align:middle"></span>
-										<?php esc_html_e( 'No image types selected — the plugin will not process any images until you choose at least one.', 'wp-smart-image-resize' ); ?>
-									</p>
-								<?php endif; ?>
+							</div>
+
+							<!-- Background Color -->
+							<div class="wp-sir-field">
+								<label class="wp-sir-field__label" for="wpSirColorPicker">
+									<?php esc_html_e( 'Background Color', 'wp-smart-image-resize' ); ?>
+									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Color used to fill empty space when an image is padded to fit the target size. Leave empty to keep transparency.', 'wp-smart-image-resize' ); ?>"></span>
+								</label>
+								<div class="wp-sir-field__control">
+									<?php $this->settings_field_bg_color( [] ); ?>
+								</div>
 							</div>
 
 							<!-- Trim Whitespace -->
@@ -107,41 +106,6 @@ $settings    = wp_sir_get_settings();
 								</label>
 								<div class="wp-sir-field__control">
 									<?php $this->settings_field_enable_trim(); ?>
-								</div>
-							</div>
-
-							
-
-							
-							<!-- Remove Background (Lite — teaser) -->
-							<div class="wp-sir-field">
-								<label class="wp-sir-field__label">
-									<?php esc_html_e( 'AI Background Removal', 'wp-smart-image-resize' ); ?>
-									<a href="https://sirplugin.com/?utm_source=wp&amp;utm_medium=plugin&amp;utm_campaign=removebg_teaser" target="_blank" class="wp-sir-pro-pill"><?php esc_html_e( 'PRO', 'wp-smart-image-resize' ); ?></a>
-								</label>
-								<div class="wp-sir-field__control">
-									<span class="dashicons dashicons-lock" aria-hidden="true" style="color:#a7aaad;vertical-align:middle;"></span>
-									<a href="https://sirplugin.com/?utm_source=wp&amp;utm_medium=plugin&amp;utm_campaign=removebg_teaser" target="_blank">
-										<?php esc_html_e( 'Upgrade to Pro to automatically remove image backgrounds', 'wp-smart-image-resize' ); ?>
-									</a>
-									<p style="margin:4px 0 0;font-size:12px;color:#777;">
-										<?php esc_html_e( 'Automatically removes backgrounds using remove.bg, powered by your own remove.bg account.', 'wp-smart-image-resize' ); ?>
-										<a href="https://docs.sirplugin.com/features/ai-background-removal" target="_blank" rel="noopener">
-											<?php esc_html_e( 'Learn more', 'wp-smart-image-resize' ); ?>
-										</a>
-									</p>
-								</div>
-							</div>
-							
-
-							<!-- Background Color -->
-							<div class="wp-sir-field">
-								<label class="wp-sir-field__label" for="wpSirColorPicker">
-									<?php esc_html_e( 'Unified Background Color', 'wp-smart-image-resize' ); ?>
-									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Fills empty background space. Leave empty for transparency.', 'wp-smart-image-resize' ); ?>"></span>
-								</label>
-								<div class="wp-sir-field__control">
-									<?php $this->settings_field_bg_color( [] ); ?>
 								</div>
 							</div>
 
@@ -192,32 +156,18 @@ $settings    = wp_sir_get_settings();
 								</div>
 							</div>
 
-							<!-- How images fit the frame -->
+							<?php if ( apply_filters( 'enable_experimental_features/crop_mode', false ) ) : ?>
+							<!-- Cropping Mode -->
 							<div class="wp-sir-field">
 								<label class="wp-sir-field__label">
-									<?php esc_html_e( 'How images fit the frame', 'wp-smart-image-resize' ); ?>
-									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Choose whether images keep their whole content (with background space added) or fill the frame completely (trimming edges).', 'wp-smart-image-resize' ); ?>"></span>
+									<?php esc_html_e( 'Cropping Mode', 'wp-smart-image-resize' ); ?>
+									<span class="wp-sir-help-tip" title="<?php esc_attr_e( 'Choose how images are fitted to the target dimensions. (Experimental)', 'wp-smart-image-resize' ); ?>"></span>
 								</label>
 								<div class="wp-sir-field__control">
 									<?php $this->settings_field_cropping_mode(); ?>
 								</div>
 							</div>
-
-							<?php
-							/**
-							 * Fires at the end of the Advanced settings section, inside the
-							 * same <form> as the rest of these fields. A field rendered here
-							 * named wp_sir_settings[your_key] is saved as part of the plugin's
-							 * normal settings array automatically — no separate form, nonce,
-							 * or save handler needed. Meant for small companion add-ons that
-							 * expose a narrow, advanced option (not worth a checkbox in the
-							 * main plugin for every merchant) as simple UI for merchants who
-							 * don't want to use a code snippet/filter directly.
-							 *
-							 * @param array $settings Current plugin settings.
-							 */
-							do_action( 'wp_sir_advanced_settings_after', $settings );
-							?>
+							<?php endif; ?>
 
 						</div><!-- /#wp-sir-advanced-fields -->
 

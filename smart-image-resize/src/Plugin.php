@@ -83,12 +83,7 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 				'ajax_url'                 => admin_url( 'admin-ajax.php' ),
 				'nonce'                    => wp_create_nonce( 'wp-sir-ajax' ),
 				'restore_nonce'            => wp_create_nonce( 'wp_sir_bulk_restore' ),
-				'removebg_nonce'           => wp_create_nonce( 'wp_sir_removebg_check_credits' ),
 				'process_ml_upload_cookie' => Process_Media_Library_Upload::COOKIE_NAME,
-				'bg_removal_active'        => ( function() {
-					$s = \wp_sir_get_settings();
-					return ! empty( $s['enable_remove_bg'] ) && ! empty( $s['removebg_api_key'] ) ? 1 : 0;
-				} )(),
 				'bulk' => [
 					'action_start'   => Bulk_Processor::AJAX_START,
 					'action_process' => Bulk_Processor::AJAX_PROCESS,
@@ -100,7 +95,6 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 				'i18n' => [
 					'no_processed_images' => __( 'No processed images found', 'wp-smart-image-resize' ),
 					'restore_confirm'     => __( 'This will restore all images to their original state before the plugin processed them. This cannot be undone for images without a backup. Continue?', 'wp-smart-image-resize' ),
-					'removebg_checking'   => __( 'Checking…', 'wp-smart-image-resize' ),
 				],
 			] );
 		}
@@ -171,31 +165,22 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 		 * @return void
 		 */
 		public function load_dependencies() {
+			include_once WP_SIR_DIR . 'src/vendor/autoload.php';
 			include_once WP_SIR_DIR . 'src/Exceptions/Invalid_Image_Meta_Exception.php';
 			include_once WP_SIR_DIR . 'src/helpers.php';
 
 			// TODO: Clean and merge Helper.php file into helpers.php
 			include_once WP_SIR_DIR . 'src/Helper.php';
-
-			// Editor classes (extend WP_Image_Editor_GD / WP_Image_Editor_Imagick).
-			include_once WP_SIR_DIR . 'src/editor/trait-safe-save.php';
-			include_once WP_SIR_DIR . 'src/editor/class-editor-gd.php';
-			include_once WP_SIR_DIR . 'src/editor/class-editor-imagick.php';
-			include_once WP_SIR_DIR . 'src/editor/class-editor-factory.php';
-
-			// Tools.
-			include_once WP_SIR_DIR . 'src/tools/interface-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-trim-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-thumbnail-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-watermark-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-webp-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-pad-tool.php';
-			include_once WP_SIR_DIR . 'src/tools/class-remove-background-tool.php';
-
+			include_once WP_SIR_DIR . 'src/Image_Filters/Watermark_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/Trim_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/CreateWebP_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/Thumbnail_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/Recanvas_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Filters/Pad_Original_Filter.php';
+			include_once WP_SIR_DIR . 'src/Image_Manager.php';
 			include_once WP_SIR_DIR . 'src/Utilities/Request.php';
 			include_once WP_SIR_DIR . 'src/Utilities/Env.php';
 			include_once WP_SIR_DIR . 'src/Utilities/File.php';
-			include_once WP_SIR_DIR . 'src/Utilities/Remove_Bg_Client.php';
 			include_once WP_SIR_DIR . 'src/functions.php';
 			include_once WP_SIR_DIR . 'src/Image_Meta.php';
 			include_once WP_SIR_DIR . 'src/Processable_Trait.php';
@@ -220,7 +205,9 @@ if ( ! class_exists( '\WP_Smart_Image_Resize\Plugin' ) ) :
 
 			include_once WP_SIR_DIR . 'src/class-get-started-notice.php';
 
-			Image_Editor::get_instance()->run();
+			if ( extension_loaded( 'fileinfo' ) ) {
+				Image_Editor::get_instance()->run();
+			}
 
 			Admin::get_instance()->init();
 			Bulk_Processor::instance()->init();

@@ -2,8 +2,6 @@
 
 namespace WP_Smart_Image_Resize;
 
-use WP_Smart_Image_Resize\Utilities\Backup;
-
 /**
  * Built-in bulk image processor — dedicated DB tables.
  *
@@ -138,6 +136,20 @@ class Bulk_Processor {
         delete_option( self::OPT_LEGACY_E );
     }
 
+    /**
+     * Drop tables on plugin uninstall.
+     * Called from uninstall.php (create that file if it doesn't exist).
+     */
+    public static function uninstall() {
+        global $wpdb;
+        // phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+        $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}sir_bulk_queue" );
+        $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}sir_bulk_errors" );
+        // phpcs:enable
+        delete_option( self::OPT_STATE );
+        delete_option( self::OPT_DB_VER );
+    }
+
     // -------------------------------------------------------------------------
     // AJAX handlers
     // -------------------------------------------------------------------------
@@ -194,24 +206,6 @@ class Bulk_Processor {
 
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        // This batch is already driven by an AJAX-polled progress bar, so
-        // slow, blocking steps like the remove.bg API call are safe here —
-        // unlike a live upload request, the merchant already expects this to
-        // take time.
-        Image_Editor::$allow_blocking_calls = true;
-
-        // get_processable_ids() (via Filter_Processable_Regenerate_Thumbnails)
-        // is the actual authority on whether an image belongs in this batch —
-        // it already covers product/term-attached images, already-processed
-        // images, and plain Media Library images. Processable_Trait's own
-        // checks are keyed off upload-time context (an actual upload
-        // request, post_parent, etc.) that doesn't exist during this AJAX
-        // call, so without this override a plain Media Library image would
-        // be queued here (correctly) but then silently skipped by the
-        // resize pipeline every single run, forever re-appearing as "needs
-        // processing" without ever actually being processed.
-        $_REQUEST['_processable_image'] = true;
-
         foreach ( $batch as $image_id ) {
             $image_id  = (int) $image_id;
             $file_path = get_attached_file( $image_id );
@@ -231,7 +225,6 @@ class Bulk_Processor {
 
             try {
                 @set_time_limit( 60 );
-                self::maybe_restore_pristine_original( $image_id, $file_path );
                 $meta = wp_generate_attachment_metadata( $image_id, $file_path );
                 if ( ! empty( $meta ) && is_array( $meta ) ) {
                     wp_update_attachment_metadata( $image_id, $meta );
@@ -248,9 +241,6 @@ class Bulk_Processor {
             $state['done']++;
             $state['offset']++;
         }
-
-        Image_Editor::$allow_blocking_calls = false;
-        unset( $_REQUEST['_processable_image'] );
 
         if ( $state['offset'] >= $state['total'] ) {
             $state['status']      = 'done';
@@ -459,51 +449,6 @@ class Bulk_Processor {
         check_ajax_referer( 'wp-sir-ajax', 'nonce' );
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error( [ 'message' => 'Unauthorized.' ], 403 );
-        }
-    }
-
-    /**
-     * Restore the pristine original from backup before reprocessing, when
-     * "Resize Original Image" is on.
-     *
-     * That setting modifies the original file in place (trim + pad, no
-     * filename change — unlike the PNG→JPG conversion path, which already
-     * restores its own pristine copy elsewhere). Without this, a second
-     * Bulk Resize/Process Again run — the exact "I changed a setting, now
-     * redo everything" workflow this tool exists for — would treat
-     * whatever the previous run already padded as the new "original" and
-     * compound on top of it, rather than reprocessing the real source.
-     * WP core's own thumbnail generation also reads this same on-disk file
-     * before our wp_generate_attachment_metadata filter ever runs, so the
-     * restore has to happen here, ahead of that call — fixing the original
-     * from inside Image_Editor::processImage() alone would be too late for
-     * subsizes.
-     *
-     * No-ops when "Resize Original Image" is off (the original is never
-     * modified in that case, so there's nothing to compound) or no backup
-     * exists yet (first-ever processing of this image).
-     */
-    private static function maybe_restore_pristine_original( int $image_id, string $file_path ) {
-        if ( empty( wp_sir_get_settings()['process_original'] ) ) {
-            return;
-        }
-
-        $backup       = new Backup();
-        $original_ptr = get_post_meta( $image_id, '_sir_backup_original', true );
-
-        if ( ! $original_ptr ) {
-            $original_ptr = $backup->legacy_relative_of( $file_path );
-        }
-
-        if ( ! $backup->exists_at( $original_ptr ) ) {
-            return;
-        }
-
-        try {
-            $backup->restore_at( $original_ptr, $file_path, true );
-        } catch ( \Exception $e ) {
-            // Leave the file as-is — the run below just reprocesses whatever
-            // is currently on disk, same as before this fix existed.
         }
     }
 

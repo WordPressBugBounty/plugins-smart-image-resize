@@ -32,21 +32,17 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <?php
                     $cached_count = get_transient( \WP_Smart_Image_Resize\Bulk_Processor::CACHE_COUNT_KEY );
                     if ( false === $cached_count ) {
-                        // Transient missing — count will be fetched via JS on page load.
-                        $count_text   = __( 'Checking image count…', 'wp-smart-image-resize' );
+                        $count_text = __( 'Checking image count…', 'wp-smart-image-resize' );
                         $btn_disabled = true;
-                        $needs_count  = true;
                     } elseif ( (int) $cached_count > 0 ) {
                         $count_text = sprintf(
                             _n( '%s image ready to be processed.', '%s images ready to be processed.', (int) $cached_count, 'wp-smart-image-resize' ),
                             number_format_i18n( (int) $cached_count )
                         );
                         $btn_disabled = false;
-                        $needs_count  = false;
                     } else {
-                        $count_text   = __( 'All your images are already up to date.', 'wp-smart-image-resize' );
+                        $count_text = __( 'All your images are already up to date.', 'wp-smart-image-resize' );
                         $btn_disabled = true;
-                        $needs_count  = false;
                     }
                     ?>
                     <p class="wp-sir-bulk-idle-text" id="wp-sir-idle-message">
@@ -145,11 +141,6 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <li><?php esc_html_e( 'You can pause and resume at any time — progress is saved automatically.', 'wp-smart-image-resize' ); ?></li>
                     <li><?php esc_html_e( 'After processing, clear your browser and caching plugin cache to see updated images.', 'wp-smart-image-resize' ); ?></li>
                     <li><?php printf(
-                        esc_html__( 'Want to undo? Use %sRestore All Images%s (in the Help tab) to roll back to the originals at any time.', 'wp-smart-image-resize' ),
-                        '<a href="' . esc_url( admin_url( 'admin.php?page=' . WP_SIR_NAME . '&tab=help#wp-sir-reset-section' ) ) . '">',
-                        '</a>'
-                    ); ?></li>
-                    <li><?php printf(
                         esc_html__( 'Having trouble? Try the %s plugin as a fallback for bulk resizing.', 'wp-smart-image-resize' ),
                         '<a href="' . esc_url( admin_url( 'plugin-install.php?s=regenerate+thumbnails&tab=search&type=term' ) ) . '" target="_blank">Regenerate Thumbnails</a>'
                     ); ?></li>
@@ -164,14 +155,3 @@ if ( ! defined( 'ABSPATH' ) ) {
     </div><!-- /.wp-sir-layout -->
 
 </div><!-- /.wp-sir-bulk-wrap -->
-
-<?php if ( ! empty( $needs_count ) ) : ?>
-<script>
-// Transient was missing on page load — auto-click the refresh button so the
-// count populates without requiring manual user interaction.
-document.addEventListener('DOMContentLoaded', function () {
-    var btn = document.getElementById('wp-sir-refresh-count');
-    if ( btn ) { btn.click(); }
-});
-</script>
-<?php endif; ?>

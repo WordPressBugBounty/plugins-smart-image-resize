@@ -58,8 +58,6 @@ function _wp_sir_get_default_settings() {
         'crop_mode'=> 'pad', //@experimental
         'disable_upscale'=> 0,
         'process_original'  => 0,
-        'enable_remove_bg'  => 0,
-        'removebg_api_key'  => '',
     ];
 }
 if (!function_exists('wp_sir_get_settings')) {
@@ -511,18 +509,7 @@ if (!function_exists('wp_sir_is_processable')) {
      * Determine whether image is uploaded through media libray.
      */
     function wp_sir_is_media_library_upload() {
-        // Mirror the checkbox's own default (Process_Media_Library_Upload::render_form()):
-        // the cookie it writes when toggled, or "on" when no cookie exists yet.
-        // Previously this always defaulted to false with nothing ever setting it
-        // true, so the checkbox — checked or not — never had any effect and a
-        // Media Library upload was never auto-processed.
-        $cookie_name = \WP_Smart_Image_Resize\Process_Media_Library_Upload::COOKIE_NAME;
-        $checkbox_on = !empty($_COOKIE[$cookie_name])
-            ? filter_var(wp_unslash($_COOKIE[$cookie_name]), FILTER_VALIDATE_BOOLEAN)
-            : true;
-        $checkbox_on = apply_filters('wp_sir_process_media_library_upload_by_default', $checkbox_on);
-
-        if (!apply_filters('wp_sir_process_media_library_upload', $checkbox_on)) {
+        if (!apply_filters('wp_sir_process_media_library_upload', false)) {
             return false;
         }
 
