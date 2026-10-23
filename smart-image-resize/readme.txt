@@ -6,7 +6,7 @@ Tested up to: 7.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Requires PHP: 7.0
-Stable tag: 1.17.1
+Stable tag: 1.18.0
 
 Make all WooCommerce product images the same size without cropping. Automatic, no configuration required.
 
@@ -70,20 +70,11 @@ Compatible with popular themes like Flatsome, Avada, Astra, OceanWP, and more. W
 ★★★★★
 > "The time saving benefits are enormous and support is A+." — [@chickwithbob](https://wordpress.org/support/topic/brilliant-lifesaver-with-incredible-support/)
 
-
-### Explore Our Other plugins:
-* Sell to businesses? [CrewCommerce](https://crewcommercepro.com/?utm_source=wordpress.org&utm_medium=readme&utm_campaign=smart-image-resize) adds company accounts to WooCommerce: team logins, monthly spending limits, and approval from the customer's own manager before an order is paid.
-* [HurryTimer](https://hurrytimer.com) – Countdown timers for WooCommerce. Create real urgency on product pages and increase sales.
-* [Conditional Add to Cart](https://condicart.com) – Show, hide, or replace the Add to Cart button based on user role, stock, schedule, or custom rules.
-* [ReThumbify](https://rethumbify.com) – Regenerate thumbnails in the background with features like pause/resume, selective regeneration, cleanup of old or unused thumbnails, and more.
-
 == Installation ==
 
 1. Upload the `smart-image-resize` folder to `/wp-content/plugins/`
 2. Activate the plugin through the Plugins menu
 3. Go to **WooCommerce > Smart Image Resize** — it works immediately with smart defaults
-
-**Requirement:** PHP `fileinfo` extension must be enabled (most hosts have this on by default).
 
 == Frequently Asked Questions ==
 
@@ -153,14 +144,19 @@ Your resized images stay resized — they're real files on your server, not temp
 
 == Screenshots ==
 
-1. Before and after — messy product grid turned into clean, uniform images.
-2. Settings — simple options, no learning curve.
-3. Bulk resize — fix your entire catalog with one click.
-4. Bulk resize in progress — sit back while it works.
-5. Whitespace trimming — removes empty space around your product.
-
+1. Before and after — messy product grid vs. clean, uniform images
+2. Settings page — simple, no learning curve
+3. Bulk resize — process your entire catalog in one click
+4. Processing — sit back while it handles everything
+5. Whitespace trimming — removes empty space around your product automatically
 
 == Changelog ==
+
+= 1.18.0 =
+
+* Declared compatibility with WP v7.1
+* Improved image manipulation performance.
+* Various bugfixes and improvements.
 
 = 1.17.1 =
 

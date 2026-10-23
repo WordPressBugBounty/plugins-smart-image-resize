@@ -527,6 +527,13 @@ var WP_SIR_UTIL = {
       $('.wp-sir-trim-advanced-settings').toggle($(this).prop('checked'));
     });
 
+    // Mode picker (how images fit the frame) — highlight the selected card
+    $(document).on('change', '.wp-sir-mode-card__input', function () {
+      var $group = $(this).closest('.wp-sir-mode-picker');
+      $group.find('.wp-sir-mode-card').removeClass('is-selected');
+      $(this).closest('.wp-sir-mode-card').addClass('is-selected');
+    });
+
     // Tolerance slider — live feedback message
     $('#wp-sir-trim-tolerance').on('input', function() {
       var value    = parseInt( $(this).val(), 10 );
@@ -704,6 +711,63 @@ $('.wp-sir-tabs div').on('click', function(e) {
         $header.attr('aria-expanded', 'false');
       }
     });
+
+    // ── Remove Background ──────────────────────────────────────────────
+    var $removeBgToggle = $('#wp-sir-enable-remove-bg');
+    var $removeBgBody   = $('#wp-sir-remove-bg-body');
+    var $removeBgKey    = $('#wp-sir-removebg-api-key');
+    var $removeBgStatus = $('#wp-sir-removebg-credits');
+
+    $removeBgToggle.on('change', function () {
+      $removeBgBody.slideToggle(200);
+    });
+
+    function checkRemoveBgCredits() {
+      var apiKey = $.trim($removeBgKey.val());
+
+      if (!apiKey) {
+        $removeBgStatus.text('');
+        return;
+      }
+
+      var checkingText = (typeof wp_sir_object !== 'undefined' && wp_sir_object.i18n)
+        ? wp_sir_object.i18n.removebg_checking
+        : 'Checking…';
+      $removeBgStatus.text(checkingText);
+
+      $.post(wp_sir_object.ajax_url, {
+        action: 'wp_sir_removebg_check_credits',
+        api_key: apiKey,
+        nonce: wp_sir_object.removebg_nonce
+      }).done(function (response) {
+        if (response && response.success) {
+          $removeBgStatus.text(response.data.message);
+        } else {
+          $removeBgStatus.text((response && response.data && response.data.message) || 'Could not verify this API key.');
+        }
+      }).fail(function () {
+        $removeBgStatus.text('Could not reach remove.bg — please try again.');
+      });
+    }
+
+    if ($removeBgKey.length) {
+      $('#wp-sir-removebg-check-credits').on('click', function (e) {
+        e.preventDefault();
+        checkRemoveBgCredits();
+      });
+
+      $('#wp-sir-removebg-toggle-visibility').on('click', function (e) {
+        e.preventDefault();
+        var isPassword = $removeBgKey.attr('type') === 'password';
+        $removeBgKey.attr('type', isPassword ? 'text' : 'password');
+        $(this).find('.dashicons').toggleClass('dashicons-visibility dashicons-hidden');
+      });
+
+      // Auto-check once on load if a key is already saved.
+      if ($removeBgKey.val()) {
+        checkRemoveBgCredits();
+      }
+    }
 
   });
 })(jQuery);
@@ -1185,3 +1249,201 @@ $('.wp-sir-tabs div').on('click', function(e) {
   });
 
 })(jQuery);
+
+
+// ── Background-removal thumbnail overlay ─────────────────────────────────────
+// Only active when bg removal is enabled. After an upload, we watch for
+// attachments that have _sir_bg_pending set and overlay a spinner on their
+// thumbnail in the media library grid. Once done we swap the src and show ✓.
+(function ($) {
+  'use strict';
+
+  if ( typeof wp_sir_object === 'undefined' || ! wp_sir_object.bg_removal_active ) {
+    return;
+  }
+
+  var ajaxUrl  = wp_sir_object.ajax_url;
+  var nonce    = wp_sir_object.nonce;
+  var POLL_MS  = 4000;  // poll every 4 seconds
+  var watching = {};    // { attachmentId: { $el, intervalId } }
+
+  // ── CSS injected once ─────────────────────────────────────────────────────
+
+  var CSS = [
+    '.sir-bg-overlay {',
+    '  position:absolute; inset:0; display:flex; flex-direction:column;',
+    '  align-items:center; justify-content:center;',
+    '  background:rgba(0,0,0,.55); border-radius:2px; z-index:10;',
+    '  pointer-events:none;',
+    '}',
+    '.sir-bg-overlay__spinner {',
+    '  width:22px; height:22px;',
+    '  border:3px solid rgba(255,255,255,.35);',
+    '  border-top-color:#fff;',
+    '  border-radius:50%;',
+    '  animation:sir-spin .8s linear infinite;',
+    '}',
+    '.sir-bg-overlay__label {',
+    '  margin-top:5px; font-size:10px; color:#fff;',
+    '  font-family:-apple-system,sans-serif; line-height:1;',
+    '}',
+    '.sir-bg-overlay--done .sir-bg-overlay__spinner { display:none; }',
+    '.sir-bg-overlay--done .sir-bg-overlay__label {',
+    '  font-size:20px; margin:0;',
+    '}',
+    '@keyframes sir-spin { to { transform:rotate(360deg); } }',
+  ].join('\n');
+
+  $('<style>').text(CSS).appendTo('head');
+
+  // ── Overlay helpers ───────────────────────────────────────────────────────
+
+  function addOverlay($article) {
+    if ( $article.find('.sir-bg-overlay').length ) return;
+    var $ov = $(
+      '<div class="sir-bg-overlay">' +
+        '<div class="sir-bg-overlay__spinner"></div>' +
+        '<div class="sir-bg-overlay__label">Processing…</div>' +
+      '</div>'
+    );
+    // The media grid renders <article> with position:relative already.
+    $article.css('position', 'relative').append($ov);
+  }
+
+  function markDone($article) {
+    var $ov = $article.find('.sir-bg-overlay');
+    if ( ! $ov.length ) return;
+    $ov.addClass('sir-bg-overlay--done');
+    $ov.find('.sir-bg-overlay__label').text('✓');
+    setTimeout(function () {
+      $ov.fadeOut(600, function () { $ov.remove(); });
+    }, 1800);
+  }
+
+  function markFailed($article) {
+    var $ov = $article.find('.sir-bg-overlay');
+    if ( ! $ov.length ) return;
+    $ov.css('background', 'rgba(180,0,0,.6)');
+    $ov.find('.sir-bg-overlay__spinner').hide();
+    $ov.find('.sir-bg-overlay__label').text('bg removal failed');
+    setTimeout(function () {
+      $ov.fadeOut(800, function () { $ov.remove(); });
+    }, 3000);
+  }
+
+  // ── Poll a batch of watched IDs ───────────────────────────────────────────
+
+  function pollBatch() {
+    var ids = Object.keys(watching);
+    if ( ! ids.length ) return;
+
+    $.post( ajaxUrl, {
+      action : 'wp_sir_bg_status',
+      nonce  : nonce,
+      ids    : JSON.stringify( ids.map(Number) )
+    }, function (res) {
+      if ( ! res || ! res.success || ! res.data.statuses ) return;
+
+      $.each( res.data.statuses, function (id, info) {
+        var entry = watching[ id ];
+        if ( ! entry ) return;
+
+        if ( info.status === 'done' ) {
+          // Swap thumbnail src so the user sees the cutout immediately.
+          if ( info.thumbnail_url ) {
+            entry.$el.find('img').attr( 'src', info.thumbnail_url );
+          }
+          markDone( entry.$el );
+          clearInterval( entry.intervalId );
+          delete watching[ id ];
+
+        } else if ( info.status === 'failed' ) {
+          markFailed( entry.$el );
+          clearInterval( entry.intervalId );
+          delete watching[ id ];
+        }
+        // 'pending' → keep watching
+      });
+    }, 'json' );
+  }
+
+  // ── Watch a newly-uploaded attachment ─────────────────────────────────────
+
+  function watchAttachment(attachmentId, $article) {
+    if ( watching[ attachmentId ] ) return;
+
+    addOverlay( $article );
+
+    var intervalId = setInterval( pollBatch, POLL_MS );
+    watching[ attachmentId ] = { $el: $article, intervalId: intervalId };
+
+    // Kick off immediately so we don't wait 4 s for the first check.
+    pollBatch();
+  }
+
+  // Given an attachment id, do a one-shot status check; start watching if pending.
+  function checkAndWatch(id, $article) {
+    if ( ! id || ! $article || ! $article.length ) return;
+    $.post( ajaxUrl, {
+      action : 'wp_sir_bg_status',
+      nonce  : nonce,
+      ids    : JSON.stringify( [ Number(id) ] )
+    }, function (res) {
+      if ( ! res || ! res.success || ! res.data.statuses ) return;
+      var info = res.data.statuses[ id ];
+      if ( info && info.status === 'pending' ) {
+        watchAttachment( id, $article );
+      }
+    }, 'json' );
+  }
+
+  // ── Hook into wp.media / uploads ──────────────────────────────────────────
+
+  $(document).ready(function () {
+    if ( ! window.wp || ! wp.media ) return;
+
+    // Intercept wp.Uploader success event (fired for every completed upload).
+    if ( wp.Uploader && wp.Uploader.prototype ) {
+      var _origSuccess = wp.Uploader.prototype.success;
+      wp.Uploader.prototype.success = function ( attachment ) {
+        if ( _origSuccess ) _origSuccess.apply( this, arguments );
+
+        var id = attachment && attachment.get && attachment.get('id');
+        if ( ! id ) return;
+
+        // Small delay so the article element has been rendered into the grid.
+        setTimeout( function () {
+          var $article = $( '.attachment[data-id="' + id + '"]' );
+          checkAndWatch( id, $article );
+        }, 800 );
+      };
+    }
+
+    // Fallback: when new attachment nodes appear in the grid, check them.
+    // Covers the grid (upload.php) view where wp.Uploader may differ.
+    if ( window.MutationObserver ) {
+      var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          $(m.addedNodes).each(function () {
+            var $node = $(this);
+            if ( ! $node.is('.attachment') ) {
+              $node = $node.find ? $node.find('.attachment') : $();
+            }
+            $node.each(function () {
+              var $article = $(this);
+              var id = parseInt( $article.data('id'), 10 );
+              if ( id && ! watching[ id ] ) {
+                checkAndWatch( id, $article );
+              }
+            });
+          });
+        });
+      });
+      var target = document.querySelector('.attachments, .media-frame-content, body');
+      if ( target ) {
+        observer.observe( target, { childList: true, subtree: true } );
+      }
+    }
+  });
+
+}(jQuery));

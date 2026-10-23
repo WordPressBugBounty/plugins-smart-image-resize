@@ -62,18 +62,43 @@ class Filter_Processable_Regenerate_Thumbnails extends Base_Filter
 
         $sqlParts = [];
 
+        // NOTE: none of these branches are individually wrapped in
+        // parentheses. "(SELECT ...) UNION (SELECT ...)" is valid MySQL but
+        // is a syntax error on SQLite (e.g. WP Playground, or the SQLite
+        // Database Integration plugin) — SQLite only accepts a compound
+        // SELECT of bare, unparenthesized statements. $wpdb->get_col()
+        // doesn't throw on a failed query, it just returns an empty result,
+        // and filter_processable_images()'s try/catch doesn't see it either
+        // (WordPress logs the DB error rather than throwing) — so on
+        // SQLite this silently produced zero candidates every time,
+        // reading as "all images already up to date" regardless of how
+        // many images actually needed processing.
+
 // Post-attached images to process.
         if ( !empty( $post_types ) ) {
-            $sqlParts[] = "( SELECT pm.meta_value FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON pm.post_id = p.ID WHERE pm.meta_key IN ( '_thumbnail_id','_product_image_gallery' ) AND p.post_type IN ( $post_types_placeholder ) )";
+            $sqlParts[] = "SELECT pm.meta_value FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON pm.post_id = p.ID WHERE pm.meta_key IN ( '_thumbnail_id','_product_image_gallery' ) AND p.post_type IN ( $post_types_placeholder )";
         }
 
 // Taxonomy-attached images to process.
         if ( !empty( $taxonomies ) ) {
-            $sqlParts[] = "( SELECT tm.meta_value FROM $wpdb->termmeta tm INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = tm.term_id WHERE tm.meta_key = 'thumbnail_id' AND tt.taxonomy IN ( $taxonomies_placeholder ) )";
+            $sqlParts[] = "SELECT tm.meta_value FROM $wpdb->termmeta tm INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = tm.term_id WHERE tm.meta_key = 'thumbnail_id' AND tt.taxonomy IN ( $taxonomies_placeholder )";
         }
 
 // Already processed images.
-        $sqlParts[] = "(SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE pm.meta_key = '_processed_at' AND pm.meta_value != '' )";
+        $sqlParts[] = "SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE pm.meta_key = '_processed_at' AND pm.meta_value != ''";
+
+        // Plain Media Library images — not attached to a product/term at all,
+        // or attached to some other post type. The plugin can process any
+        // image uploaded through the Media Library (see
+        // Process_Media_Library_Upload), so those images need to surface
+        // here too, or the bulk tool can never find and offer to process
+        // ones that were missed on upload (checkbox left unchecked, bulk
+        // imported, uploaded before the plugin was active, etc.) — without
+        // this branch they're invisible to both the "ready to process"
+        // count and the queue itself.
+        if ( apply_filters( 'wp_sir_bulk_include_all_media_library_images', true ) ) {
+            $sqlParts[] = "SELECT p.ID FROM $wpdb->posts p WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%' AND p.post_status != 'trash'";
+        }
 
         // Process images added via the "Additional variation images gallery" plugin.
         // @see /plugin-support/additional-variation-images-gallery.php.

@@ -67,6 +67,42 @@ class Env {
     }
 
     /**
+     * Check whether Imagick can actually encode the given image type.
+     *
+     * Some builds list a format (e.g. AVIF on ImageMagick 6) but write
+     * empty files, so do a tiny test encode instead of trusting queryFormats().
+     *
+     * @param string $mime_type
+     * @return bool
+     */
+    public static function imagick_can_write($mime_type) {
+        static $cache = [];
+
+        if (isset($cache[$mime_type])) {
+            return $cache[$mime_type];
+        }
+
+        $can_write = false;
+        $format    = strtoupper(substr(strrchr((string) $mime_type, '/'), 1));
+
+        if ($format && static::imagick_loaded()) {
+            try {
+                if (Imagick::queryFormats($format)) {
+                    $probe = new Imagick();
+                    $probe->newImage(2, 2, new \ImagickPixel('white'));
+                    $probe->setImageFormat($format);
+                    $can_write = strlen($probe->getImageBlob()) > 0;
+                    $probe->clear();
+                }
+            } catch (\Exception $e) {
+                $can_write = false;
+            }
+        }
+
+        return $cache[$mime_type] = $can_write;
+    }
+
+    /**
      * Determine which available image processor to use depending on user settings.
      * 
      * @return string

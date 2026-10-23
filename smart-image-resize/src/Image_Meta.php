@@ -83,7 +83,6 @@ class Image_Meta
             return;
         }
 
-
         try {
 
             // At this time, only original webp image get trimmed.
@@ -93,13 +92,15 @@ class Image_Meta
                 return;
             }
 
-            wp_raise_memory_limit( 'image' );
-            $image = ( new Image_Manager())->make( $webpPath );
+            $editor = \WP_Smart_Image_Resize\Editor\Editor_Factory::create( $webpPath );
 
-            $this->data[ '_trimmed_width' ]  = $image->getWidth();
-            $this->data[ '_trimmed_height' ] = $image->getHeight();
+            if ( is_wp_error( $editor ) ) {
+                return;
+            }
 
-            $image->destroy();
+            $size = $editor->get_size();
+            $this->data[ '_trimmed_width' ]  = $size['width'];
+            $this->data[ '_trimmed_height' ] = $size['height'];
 
         } catch ( Exception $e ) {
         }
@@ -150,22 +151,35 @@ class Image_Meta
      */
     public function getOriginalFullPath( $extension = false )
     {
-     
-        $file = get_attached_file( $this->id );
+        $uploads_dir = trailingslashit( wp_get_upload_dir()['basedir'] );
 
-        $basename = wp_basename( $file );
+        // If the in-memory metadata has been updated (e.g. after background
+        // removal replaces the file on disk), honour that path rather than
+        // falling back to wp_get_original_image_path(), which would return
+        // the stale pre-removal file that has already been deleted.
+        $in_memory_file = isset( $this->data['file'] ) ? $this->data['file'] : '';
+        $db_file        = get_post_meta( $this->id, '_wp_attached_file', true );
 
-        // Check for edited version first
-        if ( preg_match( '/-e[0-9]{13}\./', $basename ) ) {
-            // This is an edited version, use it
-        } elseif ( function_exists( 'wp_get_original_image_path' ) ) {
-            // Try to get the original file
-            $original_file = wp_get_original_image_path( $this->id );
-            if ( $original_file && file_exists( $original_file ) ) {
-                $file = $original_file;
+        if ( $in_memory_file && $in_memory_file !== $db_file ) {
+            // The pipeline has already updated the file path in memory — use it.
+            $file = $uploads_dir . $in_memory_file;
+        } else {
+            $file = get_attached_file( $this->id );
+
+            $basename = wp_basename( $file );
+
+            // Check for edited version first
+            if ( preg_match( '/-e[0-9]{13}\./', $basename ) ) {
+                // This is an edited version, use it
+            } elseif ( function_exists( 'wp_get_original_image_path' ) ) {
+                // Try to get the original file
+                $original_file = wp_get_original_image_path( $this->id );
+                if ( $original_file && file_exists( $original_file ) ) {
+                    $file = $original_file;
+                }
             }
         }
-        
+
         // Change extension if provided
         if ( $extension ) {
             $info = File::mb_pathinfo( $file );

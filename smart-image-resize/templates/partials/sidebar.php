@@ -40,6 +40,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <ul class="wpsirInfoBox-features">
             <li><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span><?php esc_html_e( 'Unlimited images', 'wp-smart-image-resize' ); ?></li>
             <li><span class="dashicons dashicons-performance" aria-hidden="true"></span><?php esc_html_e( 'WebP & PNG → JPG', 'wp-smart-image-resize' ); ?></li>
+            <li><span class="dashicons dashicons-art" aria-hidden="true"></span><?php esc_html_e( 'AI background removal', 'wp-smart-image-resize' ); ?></li>
             <li><span class="dashicons dashicons-shield" aria-hidden="true"></span><?php esc_html_e( 'Watermark protection', 'wp-smart-image-resize' ); ?></li>
             <li><span class="dashicons dashicons-sos" aria-hidden="true"></span><?php esc_html_e( 'Priority support', 'wp-smart-image-resize' ); ?></li>
         </ul>
